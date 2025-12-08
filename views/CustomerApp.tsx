@@ -140,6 +140,14 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
   
   const isDrink = selectedItem ? ['Coffee', 'Non-Coffee', 'Best Seller', 'Event'].includes(selectedItem.category) : false;
 
+  const categoryLabels: Record<Category, { en: string, id: string }> = {
+    'Best Seller': { en: 'Best Seller', id: 'Paling Laris' },
+    'Coffee': { en: 'Coffee', id: 'Kopi' },
+    'Non-Coffee': { en: 'Non-Coffee', id: 'Non-Kopi' },
+    'Snacks': { en: 'Snacks', id: 'Camilan' },
+    'Event': { en: 'Event', id: 'Acara' }
+  };
+
   return (
     <div className="min-h-screen pb-28 bg-moa-dark font-sans text-moa-cream selection:bg-moa-gold selection:text-moa-dark">
       {/* Offline Banner */}
@@ -161,7 +169,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
       <div className="sticky top-0 z-30 bg-moa-dark/95 backdrop-blur-xl border-b border-white/5 p-4 flex justify-between items-center shadow-lg shadow-black/20">
         <div>
           <h1 className="font-display font-bold text-lg md:text-xl text-moa-gold tracking-tight">MOA COFFEE</h1>
-          <p className="text-xs text-moa-cream/60 font-medium tracking-wide">Table #{tableNumber}</p>
+          <p className="text-xs text-moa-cream/60 font-medium tracking-wide">{t('Table', 'Meja')} #{tableNumber}</p>
         </div>
         <div className="flex gap-3 items-center">
            {/* Language Switcher */}
@@ -226,7 +234,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                         : 'bg-white/5 border-white/5 text-moa-cream hover:bg-white/10'
                     }`}
                   >
-                    {cat}
+                    {lang === 'en' ? categoryLabels[cat].en : categoryLabels[cat].id}
                   </button>
                 ))}
               </div>
@@ -469,7 +477,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                         }`}
                       >
                         <Wallet size={18} />
-                        <span className="font-bold text-sm">Cash</span>
+                        <span className="font-bold text-sm">{lang === 'en' ? 'Cash' : 'Tunai'}</span>
                       </button>
                       <button
                         onClick={() => setPaymentMethod('qris')}
@@ -549,7 +557,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                   <>
                     <h2 className="text-2xl font-display font-bold text-white mb-2">{t('Order Sent!', 'Pesanan Terkirim!')}</h2>
                     <p className="text-moa-cream/60 font-mono text-sm tracking-wide">ID: #{activeOrder.id}</p>
-                    <div className="mt-2 text-sm text-moa-gold font-bold">Table #{activeOrder.tableNumber}</div>
+                    <div className="mt-2 text-sm text-moa-gold font-bold">{t('Table', 'Meja')} #{activeOrder.tableNumber}</div>
                   </>
                 )}
               </div>
