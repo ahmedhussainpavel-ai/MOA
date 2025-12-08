@@ -34,8 +34,8 @@ const LandingPage: React.FC<{ onSelect: (role: 'customer' | 'admin', table?: num
 
   if (isAdminMode) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-moa-dark p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-moa-brown/20 via-moa-dark to-moa-dark">
-        <Card className="w-full max-w-md space-y-6 border-moa-gold/20 shadow-2xl">
+      <div className="min-h-screen flex items-center justify-center bg-moa-dark p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-moa-brown/20 via-moa-dark to-moa-dark overflow-hidden">
+        <Card className="w-full max-w-md space-y-6 border-moa-gold/20 shadow-2xl relative z-10">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-moa-gold font-display">Admin Portal</h2>
             <p className="text-moa-cream/50 text-sm mt-1">Authorized Personnel Only</p>
@@ -59,7 +59,7 @@ const LandingPage: React.FC<{ onSelect: (role: 'customer' | 'admin', table?: num
             <button 
               type="button" 
               onClick={() => setIsAdminMode(false)} 
-              className="w-full text-center text-sm text-moa-cream/40 hover:text-white mt-4 transition-colors"
+              className="w-full text-center text-sm text-moa-cream/40 hover:text-white mt-4 transition-colors p-2"
             >
               Back to Entry
             </button>
@@ -77,22 +77,22 @@ const LandingPage: React.FC<{ onSelect: (role: 'customer' | 'admin', table?: num
         className="absolute top-6 right-6 z-50 flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-xs font-bold text-moa-cream/60 hover:text-moa-gold hover:bg-white/10 hover:border-moa-gold/30 transition-all shadow-lg active:scale-95"
       >
         <ShieldCheck size={14} />
-        <span>Admin Access</span>
+        <span className="hidden sm:inline">Admin Access</span>
       </button>
 
       {/* Abstract Background Decoration */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-moa-gold/5 rounded-full blur-[120px]" />
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-moa-brown/10 rounded-full blur-[150px]" />
+      <div className="absolute top-0 left-0 w-64 h-64 md:w-96 md:h-96 bg-moa-gold/5 rounded-full blur-[80px] md:blur-[120px]" />
+      <div className="absolute bottom-0 right-0 w-[300px] h-[300px] md:w-[500px] md:h-[500px] bg-moa-brown/10 rounded-full blur-[100px] md:blur-[150px]" />
 
       <div className="relative z-10 space-y-10 max-w-md w-full">
         <div className="space-y-4">
-          <div className="w-24 h-24 bg-gradient-to-br from-moa-gold to-yellow-700 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-moa-gold/20 rotate-3 border border-white/10">
-            <Coffee size={48} className="text-moa-dark drop-shadow-md" />
+          <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-moa-gold to-yellow-700 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-moa-gold/20 rotate-3 border border-white/10">
+            <Coffee size={40} className="text-moa-dark drop-shadow-md md:w-12 md:h-12" />
           </div>
-          <h1 className="text-5xl font-display font-bold text-white tracking-tighter">
+          <h1 className="text-4xl md:text-5xl font-display font-bold text-white tracking-tighter leading-tight">
             MOA <span className="text-moa-gold">COFFEE</span>
           </h1>
-          <p className="text-moa-cream/70 font-light text-lg tracking-wide">Fresh Brew, Anywhere You Are.</p>
+          <p className="text-moa-cream/70 font-light text-base md:text-lg tracking-wide">Fresh Brew, Anywhere You Are.</p>
         </div>
 
         <div className="space-y-6 pt-4">

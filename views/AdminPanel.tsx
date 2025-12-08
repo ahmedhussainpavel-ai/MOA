@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   LayoutDashboard, Coffee, ShoppingBag, LogOut, 
   Check, Clock, BarChart3, QrCode, Plus, Trash2, Edit2, AlertCircle,
-  Search, Filter, Calendar, List, Columns, Eye, XCircle, ArrowRight
+  Search, Filter, Calendar, List, Columns, Eye, XCircle, ArrowRight, Settings,
+  Menu as MenuIcon, X
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, PieChart, Pie } from 'recharts';
 import { useStore } from '../store';
@@ -13,10 +14,11 @@ import { MenuItem, Category, Order, OrderStatus } from '../types';
 export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { 
     menu, orders, eventConfig, dbStatus,
-    updateOrderStatus, deleteMenuItem, addMenuItem, editMenuItem, updateEventConfig 
+    updateOrderStatus, deleteMenuItem, addMenuItem, editMenuItem, updateEventConfig, resetData
   } = useStore();
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu' | 'event'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu' | 'event' | 'settings'>('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Persistent Language State
   const [lang, setLang] = useState<'en' | 'id'>(() => {
@@ -150,42 +152,57 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
     setIsMenuModalOpen(false);
   };
 
-  const SidebarItem = ({ id, icon: Icon, label }: any) => (
-    <button
-      onClick={() => setActiveTab(id)}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
-        activeTab === id 
-          ? 'bg-moa-gold text-moa-dark font-bold shadow-lg shadow-moa-gold/20' 
-          : 'text-moa-cream/60 hover:bg-white/5 hover:text-moa-cream'
-      }`}
-    >
-      <Icon size={20} className={activeTab === id ? 'text-moa-dark' : 'text-moa-cream/40 group-hover:text-moa-gold transition-colors'} />
-      <span>{label}</span>
-      {id === 'orders' && pendingOrders.length > 0 && (
-        <span className="ml-auto bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">
-          {pendingOrders.length}
-        </span>
-      )}
-    </button>
-  );
+  const handleResetData = () => {
+    if (confirm(t('Are you sure? This will delete ALL orders and reset the menu to default.', 'Apakah anda yakin? Ini akan menghapus SEMUA pesanan dan mereset menu.'))) {
+      resetData();
+    }
+  };
 
-  return (
-    <div className="flex h-screen bg-moa-dark text-moa-cream font-sans overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-white/5 flex flex-col bg-[#161616]">
-        <div className="p-8">
-          <h1 className="text-2xl font-display font-bold text-white tracking-tight">MOA <span className="text-moa-gold">ADMIN</span></h1>
-          <p className="text-xs text-moa-cream/40 mt-1 uppercase tracking-wider font-semibold">Dashboard v2.0</p>
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full bg-[#161616] border-r border-white/5">
+       <div className="p-6 md:p-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-xl md:text-2xl font-display font-bold text-white tracking-tight">MOA <span className="text-moa-gold">ADMIN</span></h1>
+            <p className="text-[10px] md:text-xs text-moa-cream/40 mt-1 uppercase tracking-wider font-semibold">Dashboard v2.0</p>
+          </div>
+          {/* Mobile Close Button */}
+          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-moa-cream/60">
+            <X size={24} />
+          </button>
         </div>
         
-        <nav className="flex-1 px-4 space-y-2">
-          <SidebarItem id="dashboard" icon={LayoutDashboard} label={t('Overview', 'Ringkasan')} />
-          <SidebarItem id="orders" icon={ShoppingBag} label={t('Order Management', 'Manajemen Pesanan')} />
-          <SidebarItem id="menu" icon={Coffee} label={t('Menu Catalog', 'Katalog Menu')} />
-          <SidebarItem id="event" icon={QrCode} label={t('Event Mode', 'Mode Acara')} />
+        <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
+          {[
+            { id: 'dashboard', icon: LayoutDashboard, label: t('Overview', 'Ringkasan') },
+            { id: 'orders', icon: ShoppingBag, label: t('Orders', 'Pesanan') },
+            { id: 'menu', icon: Coffee, label: t('Menu', 'Menu') },
+            { id: 'event', icon: QrCode, label: t('Event', 'Acara') },
+            { id: 'settings', icon: Settings, label: t('Settings', 'Pengaturan') },
+          ].map((item) => (
+             <button
+              key={item.id}
+              onClick={() => {
+                setActiveTab(item.id as any);
+                setIsSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
+                activeTab === item.id 
+                  ? 'bg-moa-gold text-moa-dark font-bold shadow-lg shadow-moa-gold/20' 
+                  : 'text-moa-cream/60 hover:bg-white/5 hover:text-moa-cream'
+              }`}
+            >
+              <item.icon size={20} className={activeTab === item.id ? 'text-moa-dark' : 'text-moa-cream/40 group-hover:text-moa-gold transition-colors'} />
+              <span>{item.label}</span>
+              {item.id === 'orders' && pendingOrders.length > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">
+                  {pendingOrders.length}
+                </span>
+              )}
+            </button>
+          ))}
         </nav>
 
-        <div className="p-6 border-t border-white/5 space-y-4">
+        <div className="p-4 md:p-6 border-t border-white/5 space-y-4">
            {/* Connection Status Indicator */}
            <div className={`flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-lg border ${
              dbStatus === 'connected' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
@@ -197,10 +214,10 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
                dbStatus === 'permission-denied' ? 'bg-red-500' : 
                'bg-gray-500'
              }`} />
-             <span>
-               {dbStatus === 'connected' ? 'System Online' : 
-                dbStatus === 'permission-denied' ? 'Permission Denied' : 
-                'Offline Mode'}
+             <span className="truncate">
+               {dbStatus === 'connected' ? 'Online' : 
+                dbStatus === 'permission-denied' ? 'Denied' : 
+                'Offline'}
              </span>
            </div>
 
@@ -211,34 +228,61 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
            </div>
 
            <button onClick={onLogout} className="flex items-center gap-2 text-red-400 text-sm hover:text-red-300 transition-colors w-full px-4 py-2 rounded-lg hover:bg-red-500/10 font-medium justify-center">
-             <LogOut size={16} /> {t('Logout System', 'Keluar Sistem')}
+             <LogOut size={16} /> {t('Logout', 'Keluar')}
            </button>
         </div>
+    </div>
+  );
+
+  return (
+    <div className="flex h-screen bg-moa-dark text-moa-cream font-sans overflow-hidden">
+      
+      {/* Mobile Header / Sidebar Toggle */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-moa-dark/90 backdrop-blur-md border-b border-white/5 p-4 flex justify-between items-center">
+         <h1 className="text-lg font-display font-bold text-white">MOA <span className="text-moa-gold">ADMIN</span></h1>
+         <button onClick={() => setIsSidebarOpen(true)} className="text-moa-cream">
+           <MenuIcon size={24} />
+         </button>
+      </div>
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex flex-col w-64 h-full">
+        <SidebarContent />
       </aside>
 
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)} />
+          <div className="relative w-[80%] max-w-xs h-full bg-[#161616] shadow-2xl animate-in slide-in-from-left duration-300">
+            <SidebarContent />
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-moa-dark">
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+      <main className="flex-1 overflow-y-auto bg-moa-dark pt-16 md:pt-0">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8 pb-20 md:pb-8">
 
         {/* Database Warning Banner */}
         {dbStatus === 'permission-denied' && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-center justify-between animate-pulse">
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between animate-pulse gap-3 text-center sm:text-left">
             <div className="flex items-center gap-3">
-              <AlertCircle size={24} />
+              <AlertCircle size={24} className="flex-shrink-0" />
               <div>
                 <h3 className="font-bold">Database Permission Denied</h3>
-                <p className="text-sm opacity-80">Changes will not save to the cloud. Check your Firebase Rules.</p>
+                <p className="text-sm opacity-80">Check Firebase Rules.</p>
               </div>
             </div>
-            <a href="https://console.firebase.google.com" target="_blank" className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors">Fix in Console</a>
+            <a href="https://console.firebase.google.com" target="_blank" className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors whitespace-nowrap">Fix Rules</a>
           </div>
         )}
         
         {/* DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6 animate-fade-in">
-             <div className="flex justify-between items-center">
-                <h2 className="text-3xl font-bold font-display">{t('Store Overview', 'Ringkasan Toko')}</h2>
+             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <h2 className="text-2xl md:text-3xl font-bold font-display">{t('Store Overview', 'Ringkasan Toko')}</h2>
                 <div className="flex gap-2">
                   <Badge variant="success">{t('Store Open', 'Toko Buka')}</Badge>
                   <span className="text-sm text-moa-cream/50">{new Date().toLocaleDateString()}</span>
@@ -246,12 +290,12 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
              </div>
 
              {/* Stat Cards */}
-             <div className="grid grid-cols-4 gap-6">
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 <Card className="bg-gradient-to-br from-white/5 to-white/0 border-moa-gold/20">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm text-moa-cream/50 font-medium">{t('Total Revenue', 'Total Pendapatan')}</p>
-                      <p className="text-3xl font-bold text-moa-gold mt-2">{formatCurrency(totalSales)}</p>
+                      <p className="text-sm text-moa-cream/50 font-medium">{t('Revenue', 'Pendapatan')}</p>
+                      <p className="text-2xl md:text-3xl font-bold text-moa-gold mt-2">{formatCurrency(totalSales)}</p>
                     </div>
                     <div className="p-2 bg-moa-gold/10 rounded-lg text-moa-gold"><BarChart3 size={20} /></div>
                   </div>
@@ -259,8 +303,8 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
                 <Card>
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm text-moa-cream/50 font-medium">{t('Total Orders', 'Total Pesanan')}</p>
-                      <p className="text-3xl font-bold mt-2">{totalOrders}</p>
+                      <p className="text-sm text-moa-cream/50 font-medium">{t('Orders', 'Pesanan')}</p>
+                      <p className="text-2xl md:text-3xl font-bold mt-2">{totalOrders}</p>
                     </div>
                     <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400"><ShoppingBag size={20} /></div>
                   </div>
@@ -268,8 +312,8 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
                 <Card>
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm text-moa-cream/50 font-medium">{t('Action Needed', 'Perlu Tindakan')}</p>
-                      <p className="text-3xl font-bold text-orange-400 mt-2">{pendingOrders.length}</p>
+                      <p className="text-sm text-moa-cream/50 font-medium">{t('Pending', 'Menunggu')}</p>
+                      <p className="text-2xl md:text-3xl font-bold text-orange-400 mt-2">{pendingOrders.length}</p>
                     </div>
                     <div className="p-2 bg-orange-500/10 rounded-lg text-orange-400"><AlertCircle size={20} /></div>
                   </div>
@@ -277,8 +321,8 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
                 <Card>
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-sm text-moa-cream/50 font-medium">{t('Avg Order Value', 'Rata-rata Nilai')}</p>
-                      <p className="text-3xl font-bold text-green-400 mt-2">{formatCurrency(totalOrders > 0 ? totalSales / totalOrders : 0)}</p>
+                      <p className="text-sm text-moa-cream/50 font-medium">{t('Avg Value', 'Rata-rata')}</p>
+                      <p className="text-2xl md:text-3xl font-bold text-green-400 mt-2">{formatCurrency(totalOrders > 0 ? totalSales / totalOrders : 0)}</p>
                     </div>
                     <div className="p-2 bg-green-500/10 rounded-lg text-green-400"><Clock size={20} /></div>
                   </div>
@@ -286,8 +330,8 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
              </div>
 
              {/* Charts Area */}
-             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-96">
-               <Card className="col-span-2 flex flex-col h-full w-full">
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+               <Card className="col-span-1 lg:col-span-2 flex flex-col w-full h-[300px] md:h-[400px]">
                  <h3 className="font-bold text-lg mb-6 flex items-center gap-2">{t('Weekly Performance', 'Performa Mingguan')}</h3>
                  <div className="flex-1 w-full min-h-0">
                   <ResponsiveContainer width="100%" height="100%">
@@ -320,8 +364,8 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
                   </ResponsiveContainer>
                  </div>
                </Card>
-               <Card className="col-span-1 flex flex-col h-full w-full">
-                  <h3 className="font-bold text-lg mb-6">{t('Category Distribution', 'Distribusi Kategori')}</h3>
+               <Card className="col-span-1 flex flex-col w-full h-[300px] md:h-[400px]">
+                  <h3 className="font-bold text-lg mb-6">{t('Categories', 'Kategori')}</h3>
                   <div className="flex-1 w-full min-h-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -366,16 +410,16 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
 
         {/* ORDERS MANAGEMENT */}
         {activeTab === 'orders' && (
-          <div className="space-y-6 animate-fade-in h-[calc(100vh-140px)] flex flex-col">
+          <div className="space-y-6 animate-fade-in flex flex-col h-[calc(100vh-100px)] md:h-[calc(100vh-140px)]">
             
             {/* Header & Controls */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-shrink-0">
               <div>
-                <h2 className="text-2xl font-bold font-display">{t('Order Management', 'Manajemen Pesanan')}</h2>
-                <p className="text-sm text-moa-cream/50">{t('Track and manage customer orders in real-time.', 'Lacak dan kelola pesanan pelanggan secara real-time.')}</p>
+                <h2 className="text-xl md:text-2xl font-bold font-display">{t('Order Management', 'Manajemen Pesanan')}</h2>
+                <p className="text-sm text-moa-cream/50 hidden md:block">{t('Track and manage customer orders in real-time.', 'Lacak dan kelola pesanan pelanggan secara real-time.')}</p>
               </div>
               
-              <div className="flex bg-white/5 p-1 rounded-lg border border-white/10">
+              <div className="flex bg-white/5 p-1 rounded-lg border border-white/10 self-start md:self-auto">
                 <button 
                   onClick={() => setOrderViewMode('board')}
                   className={`px-3 py-1.5 rounded-md flex items-center gap-2 text-sm font-medium transition-all ${orderViewMode === 'board' ? 'bg-moa-gold text-moa-dark shadow-sm' : 'text-moa-cream/50 hover:text-white'}`}
@@ -393,7 +437,7 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
 
             {/* List View Toolbar */}
             {orderViewMode === 'list' && (
-              <div className="flex flex-col md:flex-row gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
+              <div className="flex flex-col md:flex-row gap-4 bg-white/5 p-4 rounded-xl border border-white/5 flex-shrink-0">
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-moa-cream/40" size={18} />
                   <input 
@@ -404,11 +448,11 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
                     onChange={(e) => setOrderSearch(e.target.value)}
                   />
                 </div>
-                <div className="flex gap-4">
-                  <div className="relative">
+                <div className="flex gap-4 overflow-x-auto pb-1 md:pb-0">
+                  <div className="relative min-w-[140px]">
                     <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-moa-cream/40" size={16} />
                     <select 
-                      className="bg-black/20 border border-white/10 rounded-lg pl-10 pr-8 py-2 text-sm appearance-none focus:outline-none focus:border-moa-gold text-moa-cream cursor-pointer min-w-[140px]"
+                      className="w-full bg-black/20 border border-white/10 rounded-lg pl-10 pr-8 py-2 text-sm appearance-none focus:outline-none focus:border-moa-gold text-moa-cream cursor-pointer"
                       value={orderStatusFilter}
                       onChange={(e) => setOrderStatusFilter(e.target.value as OrderStatus | 'all')}
                     >
@@ -419,10 +463,10 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
                       <option value="cancelled">Cancelled</option>
                     </select>
                   </div>
-                  <div className="relative">
+                  <div className="relative min-w-[140px]">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-moa-cream/40" size={16} />
                     <select 
-                      className="bg-black/20 border border-white/10 rounded-lg pl-10 pr-8 py-2 text-sm appearance-none focus:outline-none focus:border-moa-gold text-moa-cream cursor-pointer min-w-[140px]"
+                      className="w-full bg-black/20 border border-white/10 rounded-lg pl-10 pr-8 py-2 text-sm appearance-none focus:outline-none focus:border-moa-gold text-moa-cream cursor-pointer"
                       value={orderDateFilter}
                       onChange={(e) => setOrderDateFilter(e.target.value as any)}
                     >
@@ -438,9 +482,9 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
             {/* VIEW CONTENT */}
             {orderViewMode === 'board' ? (
               // BOARD VIEW
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 flex-1 min-h-0 overflow-y-auto md:overflow-hidden pb-20 md:pb-0">
                 {['pending', 'preparing', 'delivered'].map(status => (
-                  <div key={status} className="bg-white/5 rounded-2xl p-4 flex flex-col h-full border border-white/5">
+                  <div key={status} className="bg-white/5 rounded-2xl p-4 flex flex-col h-[400px] md:h-full border border-white/5 flex-shrink-0">
                     <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/5 flex-shrink-0">
                       <h3 className="font-bold capitalize text-moa-gold flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full ${status === 'pending' ? 'bg-orange-500' : status === 'preparing' ? 'bg-blue-500' : 'bg-green-500'}`} />
@@ -499,8 +543,8 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
             ) : (
               // LIST VIEW
               <div className="bg-white/5 rounded-2xl border border-white/5 flex-1 overflow-hidden flex flex-col">
-                <div className="overflow-y-auto custom-scrollbar flex-1">
-                  <table className="w-full text-left border-collapse">
+                <div className="overflow-x-auto overflow-y-auto custom-scrollbar flex-1">
+                  <table className="w-full text-left border-collapse min-w-[800px]">
                     <thead className="bg-white/5 text-moa-cream/60 text-xs uppercase tracking-wider sticky top-0 backdrop-blur-md z-10">
                       <tr>
                         <th className="p-4 font-bold border-b border-white/5">Order ID</th>
@@ -571,19 +615,19 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
         {/* MENU MANAGER */}
         {activeTab === 'menu' && (
            <div className="space-y-6 animate-fade-in">
-             <div className="flex justify-between items-center">
+             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                <div>
                  <h2 className="text-2xl font-bold font-display">{t('Menu Catalog', 'Katalog Menu')}</h2>
                  <p className="text-sm text-moa-cream/50">{t('Manage your items, prices, and availability.', 'Kelola item, harga, dan ketersediaan.')}</p>
                </div>
-               <Button onClick={() => handleOpenMenuModal()} className="gap-2"><Plus size={18} /> {t('Add New Item', 'Tambah Item')}</Button>
+               <Button onClick={() => handleOpenMenuModal()} className="gap-2 w-full sm:w-auto"><Plus size={18} /> {t('Add New Item', 'Tambah Item')}</Button>
              </div>
 
-             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                {menu.map(item => (
-                 <div key={item.id} className="bg-white/5 rounded-xl overflow-hidden group border border-white/5 hover:border-moa-gold/50 transition-all hover:-translate-y-1">
-                    <div className="relative h-40 overflow-hidden">
-                      <img src={item.image} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" />
+                 <div key={item.id} className="bg-white/5 rounded-xl overflow-hidden group border border-white/5 hover:border-moa-gold/50 transition-all hover:-translate-y-1 flex flex-col">
+                    <div className="relative h-32 md:h-40 overflow-hidden shrink-0">
+                      <img src={item.image} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" loading="lazy" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-sm">
                          <button onClick={() => handleOpenMenuModal(item)} className="p-2 bg-moa-gold text-moa-dark rounded-lg hover:bg-white transition-colors"><Edit2 size={16} /></button>
                          <button onClick={() => deleteMenuItem(item.id)} className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"><Trash2 size={16} /></button>
@@ -592,10 +636,10 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
                         <Badge variant="info">{item.category}</Badge>
                       </div>
                     </div>
-                    <div className="p-4">
-                      <h4 className="font-bold text-white truncate">{lang === 'en' ? item.name_en : item.name_id}</h4>
-                      <div className="flex justify-between items-center mt-2">
-                        <p className="text-moa-gold font-bold">{formatCurrency(item.price)}</p>
+                    <div className="p-3 md:p-4 flex flex-col flex-1">
+                      <h4 className="font-bold text-white truncate text-sm md:text-base">{lang === 'en' ? item.name_en : item.name_id}</h4>
+                      <div className="flex justify-between items-center mt-auto pt-2">
+                        <p className="text-moa-gold font-bold text-sm md:text-base">{formatCurrency(item.price)}</p>
                         <div className={`w-2 h-2 rounded-full ${item.isAvailable ? 'bg-green-500' : 'bg-red-500'}`} />
                       </div>
                     </div>
@@ -609,17 +653,17 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
         {activeTab === 'event' && (
           <div className="max-w-3xl animate-fade-in">
              <Card>
-               <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
+               <div className="flex justify-between items-center mb-6 md:mb-8 border-b border-white/10 pb-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-moa-gold">{t('Event Mode Configuration', 'Konfigurasi Mode Acara')}</h2>
-                    <p className="text-sm opacity-60 mt-1">{t('Manage temporary events and generate QR codes.', 'Kelola acara sementara dan buat kode QR.')}</p>
+                    <h2 className="text-xl md:text-2xl font-bold text-moa-gold">{t('Event Mode', 'Mode Acara')}</h2>
+                    <p className="text-xs md:text-sm opacity-60 mt-1">{t('Manage temporary events.', 'Kelola acara sementara.')}</p>
                   </div>
-                  <div className={`w-16 h-9 rounded-full p-1 cursor-pointer transition-colors duration-300 ${eventConfig.isActive ? 'bg-green-500' : 'bg-white/10'}`} onClick={() => updateEventConfig({...eventConfig, isActive: !eventConfig.isActive})}>
-                    <div className={`w-7 h-7 bg-white rounded-full shadow-md transform transition-transform duration-300 ${eventConfig.isActive ? 'translate-x-7' : ''}`} />
+                  <div className={`w-14 h-8 md:w-16 md:h-9 rounded-full p-1 cursor-pointer transition-colors duration-300 flex-shrink-0 ${eventConfig.isActive ? 'bg-green-500' : 'bg-white/10'}`} onClick={() => updateEventConfig({...eventConfig, isActive: !eventConfig.isActive})}>
+                    <div className={`w-6 h-6 md:w-7 md:h-7 bg-white rounded-full shadow-md transform transition-transform duration-300 ${eventConfig.isActive ? 'translate-x-6 md:translate-x-7' : ''}`} />
                   </div>
                </div>
                
-               <div className="grid grid-cols-2 gap-6 mb-8">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8">
                  <Input 
                     label={t('Event Name', 'Nama Acara')} 
                     value={eventConfig.eventName} 
@@ -627,7 +671,7 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
                     placeholder="e.g. Grand Opening"
                   />
                  <Input 
-                    label={t('Active Table Count', 'Jumlah Meja Aktif')} 
+                    label={t('Table Count', 'Jumlah Meja')} 
                     type="number" 
                     value={eventConfig.tableCount} 
                     onChange={e => updateEventConfig({...eventConfig, tableCount: Number(e.target.value)})} 
@@ -635,29 +679,83 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
                </div>
 
                <div className="bg-moa-gold/10 border border-moa-gold/20 rounded-xl p-4 flex items-center gap-3 text-moa-gold mb-8">
-                 <AlertCircle size={20} />
+                 <AlertCircle size={20} className="flex-shrink-0" />
                  <p className="text-sm">{t('Enabling Event Mode will show a special banner on the Customer App.', 'Mengaktifkan Mode Acara akan menampilkan banner khusus di Aplikasi Pelanggan.')}</p>
                </div>
              </Card>
 
              <div className="mt-8">
                <div className="flex justify-between items-center mb-6">
-                 <h3 className="font-bold text-xl">{t('Generated QR Codes', 'Kode QR Terbuat')}</h3>
-                 <Button variant="outline" size="sm" onClick={() => window.print()}>{t('Print QR Codes', 'Cetak QR')}</Button>
+                 <h3 className="font-bold text-xl">{t('QR Codes', 'Kode QR')}</h3>
+                 <Button variant="outline" size="sm" onClick={() => window.print()}>{t('Print', 'Cetak')}</Button>
                </div>
                
-               <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                  {Array.from({ length: eventConfig.tableCount }).map((_, i) => (
-                   <div key={i} className="bg-white p-4 rounded-xl flex flex-col items-center gap-3 shadow-lg">
+                   <div key={i} className="bg-white p-3 rounded-xl flex flex-col items-center gap-2 shadow-lg">
                      <img 
                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=MOA_TABLE_${i+1}`} 
                        alt="QR" 
                        className="w-full mix-blend-multiply opacity-90"
+                       loading="lazy"
                      />
-                     <span className="text-black font-bold text-sm bg-gray-100 px-3 py-1 rounded-full">{t('Table', 'Meja')} {i+1}</span>
+                     <span className="text-black font-bold text-xs bg-gray-100 px-2 py-0.5 rounded-full whitespace-nowrap">{t('Table', 'Meja')} {i+1}</span>
                    </div>
                  ))}
                </div>
+             </div>
+          </div>
+        )}
+
+        {/* SETTINGS */}
+        {activeTab === 'settings' && (
+          <div className="max-w-2xl animate-fade-in space-y-6">
+             <div className="mb-6">
+                <h2 className="text-2xl font-bold font-display text-white">{t('Settings', 'Pengaturan')}</h2>
+                <p className="text-sm text-moa-cream/50">{t('Manage configuration.', 'Kelola konfigurasi.')}</p>
+             </div>
+             
+             <Card>
+                <div className="space-y-6">
+                   <div>
+                      <h3 className="font-bold text-lg mb-4 text-moa-gold">{t('Language', 'Bahasa')}</h3>
+                      <div className="flex gap-4">
+                        <button 
+                          onClick={() => setLang('en')}
+                          className={`flex-1 p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${
+                            lang === 'en' ? 'bg-moa-gold/10 border-moa-gold text-moa-gold' : 'bg-white/5 border-white/10 text-moa-cream/50 hover:bg-white/10'
+                          }`}
+                        >
+                          <span className="text-2xl">🇬🇧</span>
+                          <span className="font-bold">English</span>
+                        </button>
+                        <button 
+                          onClick={() => setLang('id')}
+                          className={`flex-1 p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${
+                            lang === 'id' ? 'bg-moa-gold/10 border-moa-gold text-moa-gold' : 'bg-white/5 border-white/10 text-moa-cream/50 hover:bg-white/10'
+                          }`}
+                        >
+                          <span className="text-2xl">🇮🇩</span>
+                          <span className="font-bold">Indonesia</span>
+                        </button>
+                      </div>
+                   </div>
+
+                   <div className="pt-6 border-t border-white/10">
+                      <h3 className="font-bold text-lg mb-2 text-red-400">{t('Danger Zone', 'Zona Bahaya')}</h3>
+                      <p className="text-sm text-moa-cream/60 mb-4">{t('Resetting the system will delete all order history and revert the menu to the default list.', 'Mereset sistem akan menghapus semua riwayat pesanan dan mengembalikan menu ke default.')}</p>
+                      
+                      <Button variant="danger" fullWidth onClick={handleResetData} className="gap-2">
+                         <Trash2 size={18} />
+                         {t('Factory Reset', 'Reset Pabrik')}
+                      </Button>
+                   </div>
+                </div>
+             </Card>
+
+             <div className="text-center pt-8 text-xs text-moa-cream/20 pb-8">
+               <p>MOA COFFEE App v2.0.1</p>
+               <p>Designed & Developed by Ahmed Hossain Pavel</p>
              </div>
           </div>
         )}
@@ -669,7 +767,7 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
       <Modal 
         isOpen={isMenuModalOpen} 
         onClose={() => setIsMenuModalOpen(false)} 
-        title={editingItem ? t('Edit Menu Item', 'Edit Item Menu') : t('Add New Item', 'Tambah Item Baru')}
+        title={editingItem ? t('Edit Item', 'Edit Item') : t('Add Item', 'Tambah Item')}
       >
         <div className="space-y-4">
           <ImageUpload 
@@ -677,24 +775,24 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
             onImageChange={(base64) => setMenuForm({...menuForm, image: base64})} 
           />
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input 
-              label={t("Name (English)", "Nama (Inggris)")}
+              label={t("Name (EN)", "Nama (EN)")}
               value={menuForm.name_en} 
               onChange={e => setMenuForm({...menuForm, name_en: e.target.value})} 
-              placeholder="e.g. Latte"
+              placeholder="Latte"
             />
             <Input 
-              label={t("Name (Indonesian)", "Nama (Indonesia)")}
+              label={t("Name (ID)", "Nama (ID)")}
               value={menuForm.name_id} 
               onChange={e => setMenuForm({...menuForm, name_id: e.target.value})} 
-              placeholder="e.g. Kopi Susu"
+              placeholder="Kopi Susu"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input 
-              label={t("Price (IDR)", "Harga (IDR)")}
+              label={t("Price", "Harga")}
               type="number" 
               value={menuForm.price} 
               onChange={e => setMenuForm({...menuForm, price: Number(e.target.value)})} 
@@ -702,7 +800,7 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
              <div className="flex flex-col gap-1 w-full">
               <label className="text-sm text-moa-cream/70 ml-1 font-medium">{t("Category", "Kategori")}</label>
               <select 
-                className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-moa-cream focus:border-moa-gold focus:outline-none"
+                className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-moa-cream focus:border-moa-gold focus:outline-none w-full"
                 value={menuForm.category}
                 onChange={e => setMenuForm({...menuForm, category: e.target.value as Category})}
               >
@@ -719,12 +817,12 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
             label={t("Description", "Deskripsi")}
             value={menuForm.description} 
             onChange={e => setMenuForm({...menuForm, description: e.target.value})} 
-            placeholder={t("Item description...", "Deskripsi item...")}
+            placeholder={t("Details...", "Detail...")}
           />
 
           <div className="flex gap-3 justify-end pt-4 border-t border-white/10">
             <Button variant="ghost" onClick={() => setIsMenuModalOpen(false)}>{t("Cancel", "Batal")}</Button>
-            <Button onClick={handleSaveMenu}>{editingItem ? t('Update Item', 'Perbarui Item') : t('Create Item', 'Buat Item')}</Button>
+            <Button onClick={handleSaveMenu}>{editingItem ? t('Update', 'Perbarui') : t('Create', 'Buat')}</Button>
           </div>
         </div>
       </Modal>
@@ -739,7 +837,7 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
           <div className="space-y-6">
             <div className="flex justify-between items-start border-b border-white/10 pb-4">
                <div>
-                  <h3 className="text-2xl font-bold text-moa-gold">Table {selectedOrder.tableNumber}</h3>
+                  <h3 className="text-2xl font-bold text-moa-gold">{t('Table', 'Meja')} {selectedOrder.tableNumber}</h3>
                   <p className="text-sm text-moa-cream/50 font-mono">#{selectedOrder.id}</p>
                </div>
                <div className="text-right">
@@ -748,11 +846,11 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
                </div>
             </div>
             
-            <div className="bg-white/5 rounded-xl p-4 space-y-3">
+            <div className="bg-white/5 rounded-xl p-4 space-y-3 max-h-[40vh] overflow-y-auto custom-scrollbar">
               {selectedOrder.items.map((item, i) => (
                 <div key={i} className="flex justify-between items-start border-b border-white/5 last:border-0 pb-3 last:pb-0">
                   <div>
-                    <p className="font-bold text-white">{item.quantity}x {lang === 'en' ? item.name_en : item.name_id}</p>
+                    <p className="font-bold text-white text-sm md:text-base">{item.quantity}x {lang === 'en' ? item.name_en : item.name_id}</p>
                     {/* Modifiers */}
                     <div className="flex flex-wrap gap-2 mt-1">
                        {item.sugarLevel && item.sugarLevel !== '100%' && <span className="text-[10px] bg-white/10 px-1.5 rounded text-moa-cream/70">Sugar: {item.sugarLevel}</span>}
@@ -767,7 +865,7 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
 
             <div className="space-y-2">
                <div className="flex justify-between text-sm">
-                 <span className="text-moa-cream/60">Payment Method</span>
+                 <span className="text-moa-cream/60">Payment</span>
                  <span className="capitalize font-bold">{selectedOrder.paymentMethod}</span>
                </div>
                <div className="flex justify-between text-xl font-bold text-moa-gold pt-2 border-t border-white/10">
@@ -778,7 +876,7 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
 
             <div className="grid grid-cols-2 gap-3 pt-2">
                <Button variant="outline" onClick={() => setSelectedOrder(null)}>{t('Close', 'Tutup')}</Button>
-               <Button onClick={() => window.print()}>{t('Print Receipt', 'Cetak Struk')}</Button>
+               <Button onClick={() => window.print()}>{t('Receipt', 'Struk')}</Button>
             </div>
           </div>
         </Modal>

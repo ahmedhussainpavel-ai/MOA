@@ -248,9 +248,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setOrdersState([]);
     setOfflineQueue([]);
     localStorage.clear();
+    
     if (isOnline && dbStatus === 'connected') {
-       await api.syncMenu(INITIAL_MENU);
+       await api.clearDatabase(INITIAL_MENU);
     }
+    
     window.location.reload();
   }, [isOnline, dbStatus]);
 

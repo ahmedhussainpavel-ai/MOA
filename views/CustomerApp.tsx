@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, Search, Plus, Minus, X, ChevronRight, CheckCircle, Clock, Coffee, Heart, AlertCircle, Snowflake, Zap, Wallet, QrCode, WifiOff, RefreshCw } from 'lucide-react';
+import { ShoppingBag, Search, Plus, Minus, X, ChevronRight, CheckCircle, Clock, Coffee, Heart, AlertCircle, Snowflake, Zap, Wallet, QrCode, WifiOff } from 'lucide-react';
 import { useStore } from '../store';
 import { MenuItem, CartItem, Category, Order } from '../types';
 import { formatCurrency } from '../utils';
@@ -16,7 +16,19 @@ type Lang = 'en' | 'id';
 export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
   const { menu, addOrder, orders, offlineQueue, eventConfig, isOnline } = useStore();
   const [view, setView] = useState<View>('menu');
-  const [lang, setLang] = useState<Lang>('id');
+  
+  // Language State: Default to 'id' (Indonesian), but persist user preference
+  const [lang, setLang] = useState<Lang>(() => {
+    try {
+      const saved = localStorage.getItem('moa_customer_lang');
+      return (saved === 'en' || saved === 'id') ? saved : 'id';
+    } catch { return 'id'; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('moa_customer_lang', lang);
+  }, [lang]);
+
   const [selectedCategory, setSelectedCategory] = useState<Category>('Coffee');
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -57,10 +69,8 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
   }, [tableNumber, orders, offlineQueue]);
 
   // Derived state
-  // Check both regular orders and offline queue for the active ID
   const activeOrder = orders.find(o => o.id === activeOrderId) || offlineQueue.find(o => o.id === activeOrderId);
   
-  // Filter menu
   const filteredMenu = menu.filter(item => {
     if (selectedCategory === 'Best Seller') return item.category === 'Coffee'; // Mock logic for best seller
     return item.category === selectedCategory;
@@ -68,7 +78,6 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
 
   const handleItemClick = (item: MenuItem) => {
     setSelectedItem(item);
-    // Reset options
     setSugarLevel('100%');
     setIceLevel('Normal');
     setExtraShot(false);
@@ -78,7 +87,6 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
   const addToCart = (item: MenuItem, options: Partial<CartItem>) => {
     const isDrink = ['Coffee', 'Non-Coffee', 'Best Seller', 'Event'].includes(item.category);
     
-    // Only charge for extra shot if it's a drink and selected
     const additionalCost = (isDrink && options.extraShot) ? 5000 : 0;
     const finalPrice = item.price + additionalCost;
 
@@ -122,7 +130,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
       timestamp: Date.now(),
       paymentMethod: paymentMethod
     };
-    addOrder(newOrder); // Store handles online/offline logic
+    addOrder(newOrder); 
     setActiveOrderId(newOrder.id);
     setCart([]);
     setView('tracking');
@@ -133,7 +141,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
   const isDrink = selectedItem ? ['Coffee', 'Non-Coffee', 'Best Seller', 'Event'].includes(selectedItem.category) : false;
 
   return (
-    <div className="min-h-screen pb-24 bg-moa-dark font-sans text-moa-cream selection:bg-moa-gold selection:text-moa-dark">
+    <div className="min-h-screen pb-28 bg-moa-dark font-sans text-moa-cream selection:bg-moa-gold selection:text-moa-dark">
       {/* Offline Banner */}
       <AnimatePresence>
         {!isOnline && (
@@ -141,18 +149,18 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="bg-moa-gold text-moa-dark px-4 py-2 text-xs font-bold flex items-center justify-center gap-2"
+            className="bg-moa-gold text-moa-dark px-4 py-3 text-xs font-bold flex items-center justify-center gap-2 sticky top-0 z-40"
           >
             <WifiOff size={14} />
-            {t('You are offline. Orders will sync automatically when connected.', 'Anda sedang offline. Pesanan akan disinkronkan saat terhubung.')}
+            {t('You are offline. Orders will sync automatically.', 'Anda offline. Pesanan akan disinkronkan otomatis.')}
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-moa-dark/90 backdrop-blur-xl border-b border-white/5 p-4 flex justify-between items-center shadow-lg shadow-black/20">
+      <div className="sticky top-0 z-30 bg-moa-dark/95 backdrop-blur-xl border-b border-white/5 p-4 flex justify-between items-center shadow-lg shadow-black/20">
         <div>
-          <h1 className="font-display font-bold text-xl text-moa-gold tracking-tight">MOA COFFEE</h1>
+          <h1 className="font-display font-bold text-lg md:text-xl text-moa-gold tracking-tight">MOA COFFEE</h1>
           <p className="text-xs text-moa-cream/60 font-medium tracking-wide">Table #{tableNumber}</p>
         </div>
         <div className="flex gap-3 items-center">
@@ -160,13 +168,13 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
            <div className="flex bg-white/5 rounded-lg p-1 border border-white/10">
               <button 
                 onClick={() => setLang('id')}
-                className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${lang === 'id' ? 'bg-moa-gold text-moa-dark shadow-sm' : 'text-moa-cream/50 hover:text-moa-cream'}`}
+                className={`px-3 py-1.5 text-[10px] md:text-xs font-bold rounded-md transition-all ${lang === 'id' ? 'bg-moa-gold text-moa-dark shadow-sm' : 'text-moa-cream/50 hover:text-moa-cream'}`}
               >
                 ID
               </button>
               <button 
                 onClick={() => setLang('en')}
-                className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${lang === 'en' ? 'bg-moa-gold text-moa-dark shadow-sm' : 'text-moa-cream/50 hover:text-moa-cream'}`}
+                className={`px-3 py-1.5 text-[10px] md:text-xs font-bold rounded-md transition-all ${lang === 'en' ? 'bg-moa-gold text-moa-dark shadow-sm' : 'text-moa-cream/50 hover:text-moa-cream'}`}
               >
                 EN
               </button>
@@ -185,7 +193,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
       </div>
 
       {/* Main Content */}
-      <div className="p-4 max-w-md mx-auto">
+      <div className="p-4 md:p-6 max-w-md mx-auto">
         <AnimatePresence mode="wait">
           
           {/* MENU VIEW */}
@@ -199,7 +207,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
               {eventConfig.isActive && (
                 <div className="bg-gradient-to-r from-moa-gold to-yellow-600 p-5 rounded-2xl text-moa-dark shadow-lg shadow-moa-gold/10 relative overflow-hidden">
                   <div className="relative z-10">
-                    <h3 className="font-bold font-display text-xl">{eventConfig.eventName}</h3>
+                    <h3 className="font-bold font-display text-lg md:text-xl">{eventConfig.eventName}</h3>
                     <p className="text-sm opacity-90 font-medium mt-1">{t('Special prices available!', 'Harga spesial tersedia!')}</p>
                   </div>
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
@@ -212,7 +220,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-5 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 border ${
+                    className={`px-4 py-2.5 rounded-full text-xs md:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 border ${
                       selectedCategory === cat 
                         ? 'bg-moa-gold border-moa-gold text-moa-dark shadow-lg shadow-moa-gold/20' 
                         : 'bg-white/5 border-white/5 text-moa-cream hover:bg-white/10'
@@ -224,7 +232,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
               </div>
 
               {/* Grid */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
                 {filteredMenu.map(item => (
                   <motion.div 
                     layoutId={item.id}
@@ -232,14 +240,14 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                     onClick={() => handleItemClick(item)}
                     className="bg-white/5 rounded-2xl overflow-hidden active:scale-[0.98] transition-all hover:bg-white/10 cursor-pointer group border border-white/5 shadow-sm"
                   >
-                    <div className="relative h-40 w-full overflow-hidden">
+                    <div className="relative h-36 md:h-40 w-full overflow-hidden">
                        <img src={item.image} alt={item.name_en} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-700" loading="lazy" />
                        <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg text-[10px] flex items-center gap-1 text-green-400 font-bold border border-white/10">
                          <Heart size={10} fill="currentColor" /> {item.healthyScore}
                        </div>
                     </div>
-                    <div className="p-3.5">
-                      <h3 className="font-medium text-moa-cream text-sm line-clamp-1 group-hover:text-moa-gold transition-colors">
+                    <div className="p-3">
+                      <h3 className="font-medium text-moa-cream text-xs md:text-sm line-clamp-1 group-hover:text-moa-gold transition-colors">
                         {lang === 'en' ? item.name_en : item.name_id}
                       </h3>
                       <p className="text-moa-gold font-bold mt-1.5 text-sm">
@@ -259,7 +267,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
               initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }}
               className="pb-20"
             >
-              <button onClick={() => setView('menu')} className="mb-4 flex items-center text-moa-cream/60 hover:text-moa-gold transition-colors text-sm font-medium">
+              <button onClick={() => setView('menu')} className="mb-4 flex items-center text-moa-cream/60 hover:text-moa-gold transition-colors text-sm font-medium p-2 -ml-2">
                 <ChevronRight className="rotate-180 mr-1" size={18} /> {t('Back to Menu', 'Kembali ke Menu')}
               </button>
               
@@ -267,7 +275,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                  <img src={selectedItem.image} className="w-full h-full object-cover" />
                  <div className="absolute inset-0 bg-gradient-to-t from-moa-dark via-transparent to-transparent opacity-90" />
                  <div className="absolute bottom-5 left-5 right-5">
-                    <h2 className="text-3xl font-display font-bold text-white shadow-sm leading-tight">
+                    <h2 className="text-2xl md:text-3xl font-display font-bold text-white shadow-sm leading-tight">
                       {lang === 'en' ? selectedItem.name_en : selectedItem.name_id}
                     </h2>
                  </div>
@@ -276,13 +284,13 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
               <div className="space-y-6 px-1">
                 <div>
                   <div className="flex justify-between items-baseline mb-3">
-                    <p className="text-3xl font-bold text-moa-gold tracking-tight">{formatCurrency(selectedItem.price)}</p>
+                    <p className="text-2xl md:text-3xl font-bold text-moa-gold tracking-tight">{formatCurrency(selectedItem.price)}</p>
                     <span className="text-xs px-2.5 py-1 rounded-full bg-white/10 text-moa-cream/80 font-medium border border-white/5">{selectedItem.category}</span>
                   </div>
                   <p className="text-moa-cream/80 text-sm leading-relaxed">{selectedItem.description}</p>
                 </div>
 
-                <div className="space-y-6 bg-white/5 p-5 rounded-2xl border border-white/5">
+                <div className="space-y-6 bg-white/5 p-4 md:p-5 rounded-2xl border border-white/5">
                   {/* Ingredients */}
                   <div className="space-y-2.5">
                     <p className="text-xs font-bold text-moa-cream/40 uppercase tracking-widest">{t('Ingredients', 'Komposisi')}</p>
@@ -331,7 +339,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                       {/* Extra Shot Toggle */}
                       <div 
                         onClick={() => setExtraShot(!extraShot)}
-                        className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${extraShot ? 'bg-moa-gold/10 border-moa-gold/40' : 'bg-black/20 border-white/5 hover:bg-black/30'}`}
+                        className={`flex items-center justify-between p-3 md:p-4 rounded-xl border cursor-pointer transition-all active:scale-[0.98] ${extraShot ? 'bg-moa-gold/10 border-moa-gold/40' : 'bg-black/20 border-white/5 hover:bg-black/30'}`}
                       >
                         <div>
                           <p className={`font-bold text-sm ${extraShot ? 'text-moa-gold' : 'text-moa-cream'}`}>{t('Extra Espresso Shot', 'Tambah Shot Espresso')}</p>
@@ -345,9 +353,11 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                   )}
                 </div>
 
-                <Button fullWidth onClick={() => addToCart(selectedItem, { sugarLevel, iceLevel, extraShot })}>
-                  {t('Add to Order', 'Tambah Pesanan')} — {formatCurrency(selectedItem.price + (isDrink && extraShot ? 5000 : 0))}
-                </Button>
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-moa-dark/90 backdrop-blur-xl border-t border-white/10 z-40 flex items-center justify-center">
+                    <Button fullWidth onClick={() => addToCart(selectedItem, { sugarLevel, iceLevel, extraShot })} className="max-w-md shadow-2xl">
+                    {t('Add to Order', 'Tambah Pesanan')} — {formatCurrency(selectedItem.price + (isDrink && extraShot ? 5000 : 0))}
+                    </Button>
+                </div>
               </div>
             </motion.div>
           )}
@@ -378,9 +388,9 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                   {cart.map(item => {
                      const isDrinkItem = ['Coffee', 'Non-Coffee', 'Best Seller', 'Event'].includes(item.category);
                      return (
-                      <div key={item.cartId} className="flex gap-4 bg-white/5 p-4 rounded-xl border border-white/5 items-start shadow-sm">
+                      <div key={item.cartId} className="flex gap-3 md:gap-4 bg-white/5 p-3 md:p-4 rounded-xl border border-white/5 items-start shadow-sm">
                         {/* Image */}
-                        <div className="h-20 w-20 rounded-lg overflow-hidden bg-white/10 flex-shrink-0 border border-white/5">
+                        <div className="h-16 w-16 md:h-20 md:w-20 rounded-lg overflow-hidden bg-white/10 flex-shrink-0 border border-white/5">
                           <img src={item.image} className="w-full h-full object-cover" alt={item.name_en} />
                         </div>
                         
@@ -388,8 +398,8 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                         <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch">
                           <div>
                             <div className="flex justify-between items-start">
-                              <h4 className="font-medium text-moa-cream truncate pr-2 text-sm">{lang === 'en' ? item.name_en : item.name_id}</h4>
-                              <p className="text-sm text-moa-gold font-bold whitespace-nowrap">{formatCurrency(item.price)}</p>
+                              <h4 className="font-medium text-moa-cream truncate pr-2 text-sm md:text-base">{lang === 'en' ? item.name_en : item.name_id}</h4>
+                              <p className="text-sm md:text-base text-moa-gold font-bold whitespace-nowrap">{formatCurrency(item.price)}</p>
                             </div>
                             
                             {/* Variants Display - Receipt Style */}
@@ -408,7 +418,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                                 {item.extraShot && (
                                   <div className="flex items-center gap-2 text-[10px] text-moa-gold">
                                     <Zap size={10} />
-                                    <span className="font-bold">Extra Shot (+{formatCurrency(5000)})</span>
+                                    <span className="font-bold">Extra Shot</span>
                                   </div>
                                 )}
                               </div>
@@ -418,7 +428,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                             <div className="flex items-center gap-3 bg-moa-dark rounded-lg p-1 border border-white/10 mt-3 w-fit">
                               <button 
                                 onClick={() => updateQuantity(item.cartId, -1)}
-                                className="w-6 h-6 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-moa-cream transition-colors disabled:opacity-30"
+                                className="w-6 h-6 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-moa-cream transition-colors disabled:opacity-30 p-4"
                                 disabled={item.quantity <= 1}
                               >
                                 <Minus size={12} />
@@ -426,7 +436,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                               <span className="text-sm font-bold w-4 text-center tabular-nums">{item.quantity}</span>
                               <button 
                                 onClick={() => updateQuantity(item.cartId, 1)}
-                                className="w-6 h-6 flex items-center justify-center rounded bg-moa-gold text-moa-dark hover:bg-moa-goldHover transition-colors"
+                                className="w-6 h-6 flex items-center justify-center rounded bg-moa-gold text-moa-dark hover:bg-moa-goldHover transition-colors p-4"
                               >
                                 <Plus size={12} />
                               </button>
@@ -437,7 +447,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                         {/* Remove Action */}
                         <div className="flex flex-col h-full justify-center">
                            <button onClick={() => removeFromCart(item.cartId)} className="p-2 hover:bg-red-500/10 text-red-400 rounded-lg transition-colors opacity-60 hover:opacity-100" aria-label="Remove item">
-                             <X size={16} />
+                             <X size={18} />
                            </button>
                         </div>
                       </div>
@@ -480,7 +490,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                       <span>Subtotal</span>
                       <span>{formatCurrency(cart.reduce((a, b) => a + (b.price * b.quantity), 0))}</span>
                     </div>
-                    <div className="flex justify-between text-xl font-bold text-moa-gold pt-2 border-t border-white/5">
+                    <div className="flex justify-between text-lg md:text-xl font-bold text-moa-gold pt-2 border-t border-white/5">
                       <span>Total</span>
                       <span>{formatCurrency(cart.reduce((a, b) => a + (b.price * b.quantity), 0))}</span>
                     </div>
@@ -522,7 +532,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                 
                 <div className="absolute top-0 right-1/2 translate-x-12 -translate-y-2">
                   {!isOnline || offlineQueue.find(o => o.id === activeOrder.id) ? (
-                    <Badge variant="warning">{t('Waiting for Connection', 'Menunggu Koneksi')}</Badge>
+                    <Badge variant="warning">{t('Waiting', 'Menunggu')}</Badge>
                   ) : (
                     <Badge variant="success">Live</Badge>
                   )}
@@ -574,7 +584,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
 
                      return (
                        <div key={step.status} className="flex items-center gap-4 relative z-10">
-                         <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 shadow-md ${
+                         <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 shadow-md flex-shrink-0 ${
                            isActive 
                              ? (isOffline ? 'bg-orange-500/20 border-orange-500 text-orange-500' : 'bg-moa-gold border-moa-gold text-moa-dark') 
                              : 'bg-moa-dark border-white/10 text-white/20'
@@ -619,7 +629,7 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
                    })}
                  </div>
                  <div className="border-t border-white/10 mt-4 pt-4 flex justify-between font-bold text-moa-gold text-lg">
-                   <span>Total ({activeOrder.paymentMethod === 'qris' ? 'QRIS' : 'Cash'})</span>
+                   <span>Total</span>
                    <span>{formatCurrency(activeOrder.totalAmount)}</span>
                  </div>
               </div>

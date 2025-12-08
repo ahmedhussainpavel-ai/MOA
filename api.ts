@@ -74,5 +74,20 @@ export const api = {
 
   updateEventConfig: async (config: EventConfig) => {
     return apiRequest('/eventConfig.json', 'PUT', config);
+  },
+
+  // --- SYSTEM ---
+  clearDatabase: async (defaultMenu: MenuItem[]) => {
+    // 1. Reset Menu to Default
+    const menuMap = defaultMenu.reduce((acc, item) => ({ ...acc, [item.id]: item }), {});
+    await apiRequest('/menu.json', 'PUT', menuMap);
+    
+    // 2. Delete All Orders
+    await apiRequest('/orders.json', 'DELETE');
+
+    // 3. Reset Event Config
+    await apiRequest('/eventConfig.json', 'DELETE');
+    
+    return true;
   }
 };
