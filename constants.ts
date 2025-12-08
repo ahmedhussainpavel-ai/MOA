@@ -1,0 +1,120 @@
+import { MenuItem } from './types';
+
+export const INITIAL_MENU: MenuItem[] = [
+  {
+    id: 'c1',
+    name_en: 'MOA Signature Latte',
+    name_id: 'Kopi Susu MOA',
+    price: 25000,
+    category: 'Coffee',
+    description: 'Our signature blend with secret creamy milk and palm sugar.',
+    image: 'https://picsum.photos/400/400?random=1',
+    healthyScore: 6,
+    ingredients: ['Espresso', 'Creamy Milk', 'Palm Sugar', 'Secret Syrup'],
+    isAvailable: true
+  },
+  {
+    id: 'c2',
+    name_en: 'Espresso',
+    name_id: 'Espresso',
+    price: 15000,
+    category: 'Coffee',
+    description: 'Pure, strong, and bold extraction of our house blend beans.',
+    image: 'https://picsum.photos/400/400?random=2',
+    healthyScore: 9,
+    ingredients: ['100% Arabica Beans'],
+    isAvailable: true
+  },
+  {
+    id: 'c3',
+    name_en: 'Americano',
+    name_id: 'Americano',
+    price: 18000,
+    category: 'Coffee',
+    description: 'Espresso diluted with hot water for a smooth finish.',
+    image: 'https://picsum.photos/400/400?random=3',
+    healthyScore: 9,
+    ingredients: ['Espresso', 'Water'],
+    isAvailable: true
+  },
+  {
+    id: 'c4',
+    name_en: 'Cappuccino',
+    name_id: 'Cappuccino',
+    price: 22000,
+    category: 'Coffee',
+    description: 'Espresso topped with steamed milk foam.',
+    image: 'https://picsum.photos/400/400?random=4',
+    healthyScore: 7,
+    ingredients: ['Espresso', 'Steamed Milk', 'Foam'],
+    isAvailable: true
+  },
+  {
+    id: 'c5',
+    name_en: 'Mocha',
+    name_id: 'Mocha',
+    price: 25000,
+    category: 'Coffee',
+    description: 'Chocolate flavoured variant of a café latte.',
+    image: 'https://picsum.photos/400/400?random=5',
+    healthyScore: 5,
+    ingredients: ['Espresso', 'Chocolate', 'Milk'],
+    isAvailable: true
+  },
+  {
+    id: 'nc1',
+    name_en: 'Matcha Latte',
+    name_id: 'Matcha Latte',
+    price: 25000,
+    category: 'Non-Coffee',
+    description: 'Premium Japanese green tea powder with milk.',
+    image: 'https://picsum.photos/400/400?random=6',
+    healthyScore: 8,
+    ingredients: ['Matcha Powder', 'Milk', 'Sugar'],
+    isAvailable: true
+  },
+  {
+    id: 'nc2',
+    name_en: 'Hot Chocolate',
+    name_id: 'Cokelat Panas',
+    price: 20000,
+    category: 'Non-Coffee',
+    description: 'Rich and creamy hot cocoa.',
+    image: 'https://picsum.photos/400/400?random=7',
+    healthyScore: 4,
+    ingredients: ['Cocoa Powder', 'Milk', 'Sugar'],
+    isAvailable: true
+  },
+  {
+    id: 's1',
+    name_en: 'Croissant',
+    name_id: 'Croissant',
+    price: 18000,
+    category: 'Snacks',
+    description: 'Buttery, flaky, french pastry.',
+    image: 'https://picsum.photos/400/400?random=8',
+    healthyScore: 3,
+    ingredients: ['Flour', 'Butter', 'Yeast'],
+    isAvailable: true
+  },
+  {
+    id: 's2',
+    name_en: 'Banana Bread',
+    name_id: 'Roti Pisang',
+    price: 15000,
+    category: 'Snacks',
+    description: 'Moist, sweet bread made from mashed bananas.',
+    image: 'https://picsum.photos/400/400?random=9',
+    healthyScore: 6,
+    ingredients: ['Banana', 'Flour', 'Sugar'],
+    isAvailable: true
+  }
+];
+
+export const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0
+  }).format(amount);
+};
