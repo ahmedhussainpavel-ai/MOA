@@ -1,9 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { AppProvider } from './store';
-import { CustomerApp } from './views/CustomerApp';
-import { AdminPanel } from './views/AdminPanel';
 import { Coffee, ShieldCheck, QrCode } from 'lucide-react';
 import { Button, Input, Card } from './components/ui';
+
+// Lazy Load Views
+const CustomerApp = lazy(() => import('./views/CustomerApp').then(module => ({ default: module.CustomerApp })));
+const AdminPanel = lazy(() => import('./views/AdminPanel').then(module => ({ default: module.AdminPanel })));
+
+const LoadingScreen = () => (
+  <div className="min-h-screen flex items-center justify-center bg-moa-dark text-moa-gold">
+    <div className="animate-pulse flex flex-col items-center gap-4">
+      <Coffee size={40} />
+      <p>Loading...</p>
+    </div>
+  </div>
+);
 
 const LandingPage: React.FC<{ onSelect: (role: 'customer' | 'admin', table?: number) => void }> = ({ onSelect }) => {
   const [isAdminMode, setIsAdminMode] = useState(false);
@@ -23,32 +34,34 @@ const LandingPage: React.FC<{ onSelect: (role: 'customer' | 'admin', table?: num
 
   if (isAdminMode) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-moa-dark p-4">
-        <Card className="w-full max-w-md space-y-6">
+      <div className="min-h-screen flex items-center justify-center bg-moa-dark p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-moa-brown/20 via-moa-dark to-moa-dark">
+        <Card className="w-full max-w-md space-y-6 border-moa-gold/20 shadow-2xl">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-moa-gold font-display">Admin Portal</h2>
-            <p className="text-moa-cream/50 text-sm">Restricted Access</p>
+            <h2 className="text-3xl font-bold text-moa-gold font-display">Admin Portal</h2>
+            <p className="text-moa-cream/50 text-sm mt-1">Authorized Personnel Only</p>
           </div>
           <form onSubmit={handleAdminLogin} className="space-y-4">
             <Input 
               placeholder="Username" 
               value={username} 
               onChange={e => setUsername(e.target.value)} 
+              className="bg-black/20"
             />
             <Input 
               type="password" 
               placeholder="Password" 
               value={password} 
               onChange={e => setPassword(e.target.value)} 
+              className="bg-black/20"
             />
-            {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-            <Button fullWidth type="submit">Login</Button>
+            {error && <p className="text-red-400 text-sm text-center bg-red-500/10 py-2 rounded-lg">{error}</p>}
+            <Button fullWidth type="submit" className="mt-2">Secure Login</Button>
             <button 
               type="button" 
               onClick={() => setIsAdminMode(false)} 
-              className="w-full text-center text-sm text-moa-cream/50 hover:text-moa-cream mt-4"
+              className="w-full text-center text-sm text-moa-cream/40 hover:text-white mt-4 transition-colors"
             >
-              Cancel
+              Back to Entry
             </button>
           </form>
         </Card>
@@ -58,70 +71,83 @@ const LandingPage: React.FC<{ onSelect: (role: 'customer' | 'admin', table?: num
 
   return (
     <div className="min-h-screen bg-moa-dark relative overflow-hidden flex flex-col items-center justify-center p-6 text-center">
-      {/* Abstract Background Decoration */}
-      <div className="absolute top-0 left-0 w-64 h-64 bg-moa-gold/10 rounded-full blur-[100px]" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-moa-brown/20 rounded-full blur-[120px]" />
+      {/* Admin Login Button - Top Right */}
+      <button 
+        onClick={() => setIsAdminMode(true)}
+        className="absolute top-6 right-6 z-50 flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-xs font-bold text-moa-cream/60 hover:text-moa-gold hover:bg-white/10 hover:border-moa-gold/30 transition-all shadow-lg active:scale-95"
+      >
+        <ShieldCheck size={14} />
+        <span>Admin Access</span>
+      </button>
 
-      <div className="relative z-10 space-y-8 max-w-md w-full">
-        <div className="space-y-2">
-          <div className="w-20 h-20 bg-moa-gold rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-moa-gold/20">
-            <Coffee size={40} className="text-moa-dark" />
+      {/* Abstract Background Decoration */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-moa-gold/5 rounded-full blur-[120px]" />
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-moa-brown/10 rounded-full blur-[150px]" />
+
+      <div className="relative z-10 space-y-10 max-w-md w-full">
+        <div className="space-y-4">
+          <div className="w-24 h-24 bg-gradient-to-br from-moa-gold to-yellow-700 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-moa-gold/20 rotate-3 border border-white/10">
+            <Coffee size={48} className="text-moa-dark drop-shadow-md" />
           </div>
-          <h1 className="text-4xl font-display font-bold text-white tracking-tight">
+          <h1 className="text-5xl font-display font-bold text-white tracking-tighter">
             MOA <span className="text-moa-gold">COFFEE</span>
           </h1>
-          <p className="text-moa-cream/70 font-light text-lg">Fresh Brew, Anywhere You Are.</p>
+          <p className="text-moa-cream/70 font-light text-lg tracking-wide">Fresh Brew, Anywhere You Are.</p>
         </div>
 
-        <div className="space-y-4 pt-8">
-           <Card className="border-moa-gold/20">
-             <div className="flex items-center gap-3 mb-4 text-left">
-                <QrCode className="text-moa-gold" />
+        <div className="space-y-6 pt-4">
+           <Card className="border-moa-gold/10 bg-white/5 backdrop-blur-xl">
+             <div className="flex items-center gap-4 mb-5 text-left border-b border-white/5 pb-4">
+                <div className="p-3 bg-moa-gold/10 rounded-full text-moa-gold">
+                  <QrCode size={24} />
+                </div>
                 <div>
-                  <h3 className="font-bold text-moa-cream">Customer Entry</h3>
-                  <p className="text-xs text-moa-cream/50">Simulate QR Scan</p>
+                  <h3 className="font-bold text-moa-cream text-lg">Customer Entry</h3>
+                  <p className="text-xs text-moa-cream/50">Simulate QR Code Scan</p>
                 </div>
              </div>
-             <div className="flex gap-2">
+             <div className="flex gap-3">
                <Input 
                  type="number" 
-                 placeholder="Table #" 
+                 placeholder="#" 
                  value={tableInput} 
                  onChange={e => setTableInput(e.target.value)}
-                 className="w-20 text-center"
+                 className="w-24 text-center text-lg font-bold"
                />
                <Button 
                  fullWidth 
                  onClick={() => onSelect('customer', parseInt(tableInput))}
                >
-                 Open Menu
+                 Open Digital Menu
                </Button>
              </div>
            </Card>
-
-           <button 
-             onClick={() => setIsAdminMode(true)}
-             className="flex items-center justify-center gap-2 text-moa-cream/40 hover:text-moa-gold transition-colors text-sm w-full py-4"
-           >
-             <ShieldCheck size={16} /> Staff Login
-           </button>
         </div>
       </div>
+      
+      <p className="absolute bottom-4 text-[10px] text-white/10">v2.0.0 Production Build</p>
     </div>
   );
 };
 
 const AppContent: React.FC = () => {
-  // Simple view state management
   const [view, setView] = useState<'landing' | 'customer' | 'admin'>('landing');
   const [table, setTable] = useState<number>(1);
 
   if (view === 'customer') {
-    return <CustomerApp tableNumber={table} />;
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <CustomerApp tableNumber={table} />
+      </Suspense>
+    );
   }
 
   if (view === 'admin') {
-    return <AdminPanel onLogout={() => setView('landing')} />;
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <AdminPanel onLogout={() => setView('landing')} />
+      </Suspense>
+    );
   }
 
   return (

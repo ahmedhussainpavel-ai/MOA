@@ -7,7 +7,7 @@ export interface MenuItem {
   price: number;
   category: Category;
   description: string;
-  image: string;
+  image: string; // URL or Base64
   healthyScore: number; // 1-10
   ingredients: string[];
   isAvailable: boolean;
@@ -44,4 +44,21 @@ export interface EventConfig {
 export interface SalesStat {
   name: string;
   sales: number;
+}
+
+export interface AppContextType {
+  menu: MenuItem[];
+  orders: Order[];
+  eventConfig: EventConfig;
+  isOnline: boolean;
+  dbStatus: 'connected' | 'disconnected' | 'permission-denied';
+  offlineQueue: Order[];
+  setMenu: (menu: MenuItem[]) => void;
+  addOrder: (order: Order) => void;
+  updateOrderStatus: (orderId: string, status: Order['status']) => void;
+  updateEventConfig: (config: EventConfig) => void;
+  deleteMenuItem: (id: string) => void;
+  addMenuItem: (item: MenuItem) => void;
+  editMenuItem: (item: MenuItem) => void;
+  resetData: () => void;
 }

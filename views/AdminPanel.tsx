@@ -1,30 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  LayoutDashboard, Coffee, ShoppingBag, Settings, LogOut, 
-  Check, X, Clock, BarChart3, QrCode
+  LayoutDashboard, Coffee, ShoppingBag, LogOut, 
+  Check, Clock, BarChart3, QrCode, Plus, Trash2, Edit2, AlertCircle,
+  Search, Filter, Calendar, List, Columns, Eye, XCircle, ArrowRight
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, PieChart, Pie } from 'recharts';
 import { useStore } from '../store';
-import { Button, Card, Input, Badge } from '../components/ui';
-import { formatCurrency } from '../constants';
-import { MenuItem, Category } from '../types';
+import { Button, Card, Input, Badge, Modal, ImageUpload } from '../components/ui';
+import { formatCurrency } from '../utils';
+import { MenuItem, Category, Order, OrderStatus } from '../types';
 
 export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const { 
-    menu, orders, eventConfig, 
-    updateOrderStatus, deleteMenuItem, addMenuItem, updateEventConfig, resetData 
+    menu, orders, eventConfig, dbStatus,
+    updateOrderStatus, deleteMenuItem, addMenuItem, editMenuItem, updateEventConfig 
   } = useStore();
   
   const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu' | 'event'>('dashboard');
-  const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
+  
+  // Persistent Language State
+  const [lang, setLang] = useState<'en' | 'id'>(() => {
+    const saved = localStorage.getItem('moa_admin_lang');
+    return (saved as 'en' | 'id') || 'en';
+  });
 
-  // Stats Logic
+  useEffect(() => {
+    localStorage.setItem('moa_admin_lang', lang);
+  }, [lang]);
+  
+  const t = (en: string, id: string) => lang === 'en' ? en : id;
+
+  // --- ORDER MANAGEMENT STATE ---
+  const [orderViewMode, setOrderViewMode] = useState<'board' | 'list'>('board');
+  const [orderSearch, setOrderSearch] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | 'all'>('all');
+  const [orderDateFilter, setOrderDateFilter] = useState<'today' | 'week' | 'all'>('today');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // --- MENU MANAGEMENT STATE ---
+  const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [menuForm, setMenuForm] = useState<Partial<MenuItem>>({
+    category: 'Coffee',
+    isAvailable: true,
+    ingredients: [],
+    image: '',
+    name_en: '',
+    name_id: '',
+    price: 0,
+    description: ''
+  });
+
+  // --- STATS CALCULATION ---
   const totalSales = orders.reduce((acc, o) => acc + o.totalAmount, 0);
   const totalOrders = orders.length;
   const pendingOrders = orders.filter(o => o.status === 'pending');
-  const preparingOrders = orders.filter(o => o.status === 'preparing');
 
-  // Chart Data
+  // --- CHART DATA PREPARATION ---
+  const categorySales = orders.flatMap(o => o.items).reduce((acc: any, item) => {
+    acc[item.category] = (acc[item.category] || 0) + (item.price * item.quantity);
+    return acc;
+  }, {});
+  
+  const pieData = Object.keys(categorySales).map(key => ({ name: key, value: categorySales[key] }));
+  const totalPieValue = pieData.reduce((sum, item) => sum + item.value, 0);
+  
+  const COLORS = ['#D4A85F', '#4A2E2A', '#8B6B4A', '#F4E9DA', '#FFFFFF'];
+
   const salesData = [
     { name: 'Mon', sales: 400000 },
     { name: 'Tue', sales: 300000 },
@@ -35,210 +77,527 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
     { name: 'Sun', sales: totalSales > 0 ? totalSales : 900000 },
   ];
 
-  // Menu Form State
-  const [newItem, setNewItem] = useState<Partial<MenuItem>>({
-    category: 'Coffee',
-    isAvailable: true,
-    ingredients: []
-  });
+  // --- FILTERED ORDERS LOGIC ---
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      // Search
+      const matchesSearch = 
+        order.id.toLowerCase().includes(orderSearch.toLowerCase()) || 
+        order.tableNumber.toString().includes(orderSearch);
+      
+      // Status
+      const matchesStatus = orderStatusFilter === 'all' || order.status === orderStatusFilter;
+      
+      // Date
+      let matchesDate = true;
+      const orderDate = new Date(order.timestamp);
+      const today = new Date();
+      
+      if (orderDateFilter === 'today') {
+        matchesDate = orderDate.toDateString() === today.toDateString();
+      } else if (orderDateFilter === 'week') {
+        const lastWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
+        matchesDate = orderDate >= lastWeek;
+      }
 
-  const handleAddMenu = () => {
-    if (newItem.name_en && newItem.price) {
-      addMenuItem({
-        id: Math.random().toString(),
-        name_en: newItem.name_en,
-        name_id: newItem.name_id || newItem.name_en,
-        price: Number(newItem.price),
-        category: newItem.category as Category || 'Coffee',
-        description: newItem.description || '',
-        image: 'https://picsum.photos/400/400',
-        healthyScore: 5,
+      return matchesSearch && matchesStatus && matchesDate;
+    }).sort((a, b) => b.timestamp - a.timestamp);
+  }, [orders, orderSearch, orderStatusFilter, orderDateFilter]);
+
+
+  // --- HANDLERS ---
+  const handleOpenMenuModal = (item?: MenuItem) => {
+    if (item) {
+      setEditingItem(item);
+      setMenuForm({ ...item });
+    } else {
+      setEditingItem(null);
+      setMenuForm({
+        category: 'Coffee',
+        isAvailable: true,
         ingredients: ['House Blend'],
-        isAvailable: true
+        image: '',
+        name_en: '',
+        name_id: '',
+        price: 0,
+        description: ''
       });
-      setIsMenuModalOpen(false);
-      setNewItem({ category: 'Coffee' });
     }
+    setIsMenuModalOpen(true);
+  };
+
+  const handleSaveMenu = () => {
+    if (!menuForm.name_en || !menuForm.price) return;
+
+    const itemData: MenuItem = {
+      id: editingItem ? editingItem.id : Math.random().toString(36).substr(2, 9),
+      name_en: menuForm.name_en!,
+      name_id: menuForm.name_id || menuForm.name_en!,
+      price: Number(menuForm.price),
+      category: menuForm.category as Category,
+      description: menuForm.description || '',
+      image: menuForm.image || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=400',
+      healthyScore: menuForm.healthyScore || 5,
+      ingredients: typeof menuForm.ingredients === 'string' ? (menuForm.ingredients as string).split(',') : menuForm.ingredients || [],
+      isAvailable: true
+    };
+
+    if (editingItem) {
+      editMenuItem(itemData);
+    } else {
+      addMenuItem(itemData);
+    }
+    setIsMenuModalOpen(false);
   };
 
   const SidebarItem = ({ id, icon: Icon, label }: any) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
         activeTab === id 
-          ? 'bg-moa-gold text-moa-dark font-semibold shadow-lg shadow-moa-gold/20' 
+          ? 'bg-moa-gold text-moa-dark font-bold shadow-lg shadow-moa-gold/20' 
           : 'text-moa-cream/60 hover:bg-white/5 hover:text-moa-cream'
       }`}
     >
-      <Icon size={20} />
+      <Icon size={20} className={activeTab === id ? 'text-moa-dark' : 'text-moa-cream/40 group-hover:text-moa-gold transition-colors'} />
       <span>{label}</span>
+      {id === 'orders' && pendingOrders.length > 0 && (
+        <span className="ml-auto bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">
+          {pendingOrders.length}
+        </span>
+      )}
     </button>
   );
 
   return (
-    <div className="flex min-h-screen bg-moa-dark text-moa-cream font-sans">
+    <div className="flex h-screen bg-moa-dark text-moa-cream font-sans overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-white/5 p-6 flex flex-col">
-        <div className="mb-10">
-          <h1 className="text-2xl font-display font-bold text-moa-gold tracking-tight">MOA ADMIN</h1>
-          <p className="text-xs text-moa-cream/50">Super Admin Panel</p>
+      <aside className="w-64 border-r border-white/5 flex flex-col bg-[#161616]">
+        <div className="p-8">
+          <h1 className="text-2xl font-display font-bold text-white tracking-tight">MOA <span className="text-moa-gold">ADMIN</span></h1>
+          <p className="text-xs text-moa-cream/40 mt-1 uppercase tracking-wider font-semibold">Dashboard v2.0</p>
         </div>
         
-        <nav className="flex-1 space-y-2">
-          <SidebarItem id="dashboard" icon={LayoutDashboard} label="Dashboard" />
-          <SidebarItem id="orders" icon={ShoppingBag} label="Orders" />
-          <SidebarItem id="menu" icon={Coffee} label="Menu Manager" />
-          <SidebarItem id="event" icon={QrCode} label="Event Mode" />
+        <nav className="flex-1 px-4 space-y-2">
+          <SidebarItem id="dashboard" icon={LayoutDashboard} label={t('Overview', 'Ringkasan')} />
+          <SidebarItem id="orders" icon={ShoppingBag} label={t('Order Management', 'Manajemen Pesanan')} />
+          <SidebarItem id="menu" icon={Coffee} label={t('Menu Catalog', 'Katalog Menu')} />
+          <SidebarItem id="event" icon={QrCode} label={t('Event Mode', 'Mode Acara')} />
         </nav>
 
-        <div className="pt-6 border-t border-white/5">
-           <button onClick={onLogout} className="flex items-center gap-2 text-red-400 text-sm hover:text-red-300 transition-colors">
-             <LogOut size={16} /> Logout
+        <div className="p-6 border-t border-white/5 space-y-4">
+           {/* Connection Status Indicator */}
+           <div className={`flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-lg border ${
+             dbStatus === 'connected' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
+             dbStatus === 'permission-denied' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+             'bg-white/5 text-moa-cream/50 border-white/5'
+           }`}>
+             <div className={`w-2 h-2 rounded-full ${
+               dbStatus === 'connected' ? 'bg-green-500 animate-pulse' : 
+               dbStatus === 'permission-denied' ? 'bg-red-500' : 
+               'bg-gray-500'
+             }`} />
+             <span>
+               {dbStatus === 'connected' ? 'System Online' : 
+                dbStatus === 'permission-denied' ? 'Permission Denied' : 
+                'Offline Mode'}
+             </span>
+           </div>
+
+           {/* Language Switcher */}
+           <div className="bg-white/5 p-1 rounded-lg flex border border-white/5">
+             <button onClick={() => setLang('en')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${lang === 'en' ? 'bg-moa-gold text-moa-dark' : 'text-moa-cream/50 hover:text-white'}`}>EN</button>
+             <button onClick={() => setLang('id')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${lang === 'id' ? 'bg-moa-gold text-moa-dark' : 'text-moa-cream/50 hover:text-white'}`}>ID</button>
+           </div>
+
+           <button onClick={onLogout} className="flex items-center gap-2 text-red-400 text-sm hover:text-red-300 transition-colors w-full px-4 py-2 rounded-lg hover:bg-red-500/10 font-medium justify-center">
+             <LogOut size={16} /> {t('Logout System', 'Keluar Sistem')}
            </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto bg-moa-dark">
+        <div className="p-8 max-w-7xl mx-auto space-y-8">
+
+        {/* Database Warning Banner */}
+        {dbStatus === 'permission-denied' && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-center justify-between animate-pulse">
+            <div className="flex items-center gap-3">
+              <AlertCircle size={24} />
+              <div>
+                <h3 className="font-bold">Database Permission Denied</h3>
+                <p className="text-sm opacity-80">Changes will not save to the cloud. Check your Firebase Rules.</p>
+              </div>
+            </div>
+            <a href="https://console.firebase.google.com" target="_blank" className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors">Fix in Console</a>
+          </div>
+        )}
         
         {/* DASHBOARD */}
         {activeTab === 'dashboard' && (
-          <div className="space-y-8">
-             <div className="grid grid-cols-4 gap-6">
-                <Card className="bg-gradient-to-br from-white/5 to-white/0">
-                  <p className="text-sm text-moa-cream/50">Total Sales</p>
-                  <p className="text-2xl font-bold text-moa-gold mt-1">{formatCurrency(totalSales)}</p>
-                </Card>
-                <Card>
-                  <p className="text-sm text-moa-cream/50">Total Orders</p>
-                  <p className="text-2xl font-bold mt-1">{totalOrders}</p>
-                </Card>
-                <Card>
-                  <p className="text-sm text-moa-cream/50">Pending</p>
-                  <p className="text-2xl font-bold text-orange-400 mt-1">{pendingOrders.length}</p>
-                </Card>
-                <Card>
-                  <p className="text-sm text-moa-cream/50">Preparing</p>
-                  <p className="text-2xl font-bold text-blue-400 mt-1">{preparingOrders.length}</p>
-                </Card>
-             </div>
-
-             <Card className="h-96">
-               <h3 className="font-bold text-lg mb-6 flex items-center gap-2"><BarChart3 size={20} className="text-moa-gold"/> Weekly Sales</h3>
-               <ResponsiveContainer width="100%" height="85%">
-                 <BarChart data={salesData}>
-                    <XAxis dataKey="name" stroke="#F4E9DA" opacity={0.3} />
-                    <YAxis stroke="#F4E9DA" opacity={0.3} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1C1C1C', borderColor: '#333', color: '#fff' }}
-                      itemStyle={{ color: '#D4A85F' }}
-                    />
-                    <Bar dataKey="sales" radius={[4, 4, 0, 0]}>
-                      {salesData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={index === 6 ? '#D4A85F' : '#4A2E2A'} />
-                      ))}
-                    </Bar>
-                 </BarChart>
-               </ResponsiveContainer>
-             </Card>
-
-             <div className="flex justify-end">
-               <Button variant="outline" onClick={resetData} className="text-xs py-2">Reset All Demo Data</Button>
-             </div>
-          </div>
-        )}
-
-        {/* ORDERS */}
-        {activeTab === 'orders' && (
-          <div className="grid grid-cols-3 gap-6 h-full items-start">
-             {['pending', 'preparing', 'delivered'].map(status => (
-               <div key={status} className="bg-white/5 rounded-2xl p-4 min-h-[500px]">
-                 <h3 className="font-bold capitalize mb-4 text-moa-gold flex items-center justify-between">
-                   {status} <span className="text-xs bg-white/10 px-2 py-1 rounded-full text-white">{orders.filter(o => o.status === status).length}</span>
-                 </h3>
-                 <div className="space-y-3">
-                    {orders.filter(o => o.status === status).map(order => (
-                      <Card key={order.id} className="bg-moa-dark border-white/5">
-                         <div className="flex justify-between items-start mb-2">
-                           <span className="font-bold text-lg">Table {order.tableNumber}</span>
-                           <span className="text-xs font-mono opacity-50">#{order.id}</span>
-                         </div>
-                         <div className="space-y-1 mb-4">
-                           {order.items.map((item, idx) => (
-                             <div key={idx} className="text-sm flex justify-between">
-                               <span className="opacity-80">{item.quantity}x {item.name_en}</span>
-                               <span className="opacity-40">{item.iceLevel}</span>
-                             </div>
-                           ))}
-                         </div>
-                         <div className="flex gap-2 mt-2">
-                           {status === 'pending' && (
-                             <>
-                              <Button onClick={() => updateOrderStatus(order.id, 'cancelled')} variant="ghost" className="w-1/3 py-2 text-sm text-red-400 hover:bg-red-500/10">Reject</Button>
-                              <Button onClick={() => updateOrderStatus(order.id, 'preparing')} className="w-2/3 py-2 text-sm">Accept</Button>
-                             </>
-                           )}
-                           {status === 'preparing' && (
-                             <Button onClick={() => updateOrderStatus(order.id, 'delivered')} variant="secondary" className="w-full py-2 text-sm">Ready</Button>
-                           )}
-                           {status === 'delivered' && (
-                              <div className="text-xs text-center w-full text-green-500 font-medium py-2">Completed</div>
-                           )}
-                         </div>
-                      </Card>
-                    ))}
-                 </div>
-               </div>
-             ))}
-          </div>
-        )}
-
-        {/* MENU */}
-        {activeTab === 'menu' && (
-           <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
              <div className="flex justify-between items-center">
-               <h2 className="text-xl font-bold">Menu Items</h2>
-               <Button onClick={() => setIsMenuModalOpen(true)}><Coffee size={18} /> Add New Item</Button>
+                <h2 className="text-3xl font-bold font-display">{t('Store Overview', 'Ringkasan Toko')}</h2>
+                <div className="flex gap-2">
+                  <Badge variant="success">{t('Store Open', 'Toko Buka')}</Badge>
+                  <span className="text-sm text-moa-cream/50">{new Date().toLocaleDateString()}</span>
+                </div>
              </div>
 
-             {isMenuModalOpen && (
-               <Card className="mb-6 border-moa-gold/30 bg-moa-gold/5">
-                 <h3 className="font-bold mb-4">Add New Item</h3>
-                 <div className="grid grid-cols-2 gap-4 mb-4">
-                   <Input placeholder="Name (EN)" value={newItem.name_en} onChange={e => setNewItem({...newItem, name_en: e.target.value})} />
-                   <Input placeholder="Price" type="number" value={newItem.price} onChange={e => setNewItem({...newItem, price: Number(e.target.value)})} />
-                   <Input placeholder="Description" className="col-span-2" value={newItem.description} onChange={e => setNewItem({...newItem, description: e.target.value})} />
-                   <select 
-                    className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-moa-cream"
-                    value={newItem.category}
-                    onChange={e => setNewItem({...newItem, category: e.target.value as Category})}
-                   >
-                     <option value="Coffee">Coffee</option>
-                     <option value="Non-Coffee">Non-Coffee</option>
-                     <option value="Snacks">Snacks</option>
-                   </select>
-                 </div>
-                 <div className="flex gap-2 justify-end">
-                   <Button variant="ghost" onClick={() => setIsMenuModalOpen(false)}>Cancel</Button>
-                   <Button onClick={handleAddMenu}>Save Item</Button>
+             {/* Stat Cards */}
+             <div className="grid grid-cols-4 gap-6">
+                <Card className="bg-gradient-to-br from-white/5 to-white/0 border-moa-gold/20">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm text-moa-cream/50 font-medium">{t('Total Revenue', 'Total Pendapatan')}</p>
+                      <p className="text-3xl font-bold text-moa-gold mt-2">{formatCurrency(totalSales)}</p>
+                    </div>
+                    <div className="p-2 bg-moa-gold/10 rounded-lg text-moa-gold"><BarChart3 size={20} /></div>
+                  </div>
+                </Card>
+                <Card>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm text-moa-cream/50 font-medium">{t('Total Orders', 'Total Pesanan')}</p>
+                      <p className="text-3xl font-bold mt-2">{totalOrders}</p>
+                    </div>
+                    <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400"><ShoppingBag size={20} /></div>
+                  </div>
+                </Card>
+                <Card>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm text-moa-cream/50 font-medium">{t('Action Needed', 'Perlu Tindakan')}</p>
+                      <p className="text-3xl font-bold text-orange-400 mt-2">{pendingOrders.length}</p>
+                    </div>
+                    <div className="p-2 bg-orange-500/10 rounded-lg text-orange-400"><AlertCircle size={20} /></div>
+                  </div>
+                </Card>
+                <Card>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm text-moa-cream/50 font-medium">{t('Avg Order Value', 'Rata-rata Nilai')}</p>
+                      <p className="text-3xl font-bold text-green-400 mt-2">{formatCurrency(totalOrders > 0 ? totalSales / totalOrders : 0)}</p>
+                    </div>
+                    <div className="p-2 bg-green-500/10 rounded-lg text-green-400"><Clock size={20} /></div>
+                  </div>
+                </Card>
+             </div>
+
+             {/* Charts Area */}
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-96">
+               <Card className="col-span-2 flex flex-col h-full w-full">
+                 <h3 className="font-bold text-lg mb-6 flex items-center gap-2">{t('Weekly Performance', 'Performa Mingguan')}</h3>
+                 <div className="flex-1 w-full min-h-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={salesData}>
+                        <defs>
+                          <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#D4A85F" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#D4A85F" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="name" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value/1000}k`} />
+                        <Tooltip 
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="bg-[#1C1C1C] border border-white/10 p-3 rounded-xl shadow-2xl">
+                                  <p className="text-moa-cream/60 text-xs mb-1 font-medium uppercase tracking-wider">{label}</p>
+                                  <p className="text-white font-bold text-lg">{formatCurrency(payload[0].value as number)}</p>
+                                  <p className="text-[10px] text-moa-gold mt-0.5 font-bold">{t('Revenue', 'Pendapatan')}</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                          cursor={{ stroke: '#ffffff20', strokeWidth: 1 }}
+                        />
+                        <Area type="monotone" dataKey="sales" stroke="#D4A85F" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
                  </div>
                </Card>
-             )}
+               <Card className="col-span-1 flex flex-col h-full w-full">
+                  <h3 className="font-bold text-lg mb-6">{t('Category Distribution', 'Distribusi Kategori')}</h3>
+                  <div className="flex-1 w-full min-h-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData.length ? pieData : [{name: 'None', value: 1}]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0)" />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              const percent = totalPieValue > 0 ? ((data.value / totalPieValue) * 100).toFixed(1) : '0';
+                              return (
+                                <div className="bg-[#1C1C1C] border border-white/10 p-3 rounded-xl shadow-2xl">
+                                  <p className="font-bold text-white mb-1 text-sm">{data.name}</p>
+                                  <div className="flex items-baseline gap-2">
+                                    <span className="text-moa-gold font-bold">{formatCurrency(data.value)}</span>
+                                    <span className="text-xs text-moa-cream/50">({percent}%)</span>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+               </Card>
+             </div>
+          </div>
+        )}
 
-             <div className="grid grid-cols-4 gap-4">
-               {menu.map(item => (
-                 <div key={item.id} className="bg-white/5 rounded-xl p-4 group relative">
-                    <button 
-                      onClick={() => deleteMenuItem(item.id)}
-                      className="absolute top-2 right-2 bg-red-500/80 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity text-white"
+        {/* ORDERS MANAGEMENT */}
+        {activeTab === 'orders' && (
+          <div className="space-y-6 animate-fade-in h-[calc(100vh-140px)] flex flex-col">
+            
+            {/* Header & Controls */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h2 className="text-2xl font-bold font-display">{t('Order Management', 'Manajemen Pesanan')}</h2>
+                <p className="text-sm text-moa-cream/50">{t('Track and manage customer orders in real-time.', 'Lacak dan kelola pesanan pelanggan secara real-time.')}</p>
+              </div>
+              
+              <div className="flex bg-white/5 p-1 rounded-lg border border-white/10">
+                <button 
+                  onClick={() => setOrderViewMode('board')}
+                  className={`px-3 py-1.5 rounded-md flex items-center gap-2 text-sm font-medium transition-all ${orderViewMode === 'board' ? 'bg-moa-gold text-moa-dark shadow-sm' : 'text-moa-cream/50 hover:text-white'}`}
+                >
+                  <Columns size={16} /> {t('Board', 'Papan')}
+                </button>
+                <button 
+                  onClick={() => setOrderViewMode('list')}
+                  className={`px-3 py-1.5 rounded-md flex items-center gap-2 text-sm font-medium transition-all ${orderViewMode === 'list' ? 'bg-moa-gold text-moa-dark shadow-sm' : 'text-moa-cream/50 hover:text-white'}`}
+                >
+                  <List size={16} /> {t('List', 'Daftar')}
+                </button>
+              </div>
+            </div>
+
+            {/* List View Toolbar */}
+            {orderViewMode === 'list' && (
+              <div className="flex flex-col md:flex-row gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-moa-cream/40" size={18} />
+                  <input 
+                    type="text" 
+                    placeholder={t('Search ID or Table...', 'Cari ID atau Meja...')}
+                    className="w-full bg-black/20 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-moa-gold text-moa-cream"
+                    value={orderSearch}
+                    onChange={(e) => setOrderSearch(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <div className="relative">
+                    <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-moa-cream/40" size={16} />
+                    <select 
+                      className="bg-black/20 border border-white/10 rounded-lg pl-10 pr-8 py-2 text-sm appearance-none focus:outline-none focus:border-moa-gold text-moa-cream cursor-pointer min-w-[140px]"
+                      value={orderStatusFilter}
+                      onChange={(e) => setOrderStatusFilter(e.target.value as OrderStatus | 'all')}
                     >
-                      <X size={14} />
-                    </button>
-                    <img src={item.image} className="w-full h-32 object-cover rounded-lg mb-3 opacity-80" />
-                    <h4 className="font-medium text-moa-cream truncate">{item.name_en}</h4>
-                    <p className="text-moa-gold font-bold">{formatCurrency(item.price)}</p>
-                    <div className="mt-2 flex gap-2">
-                       <Badge variant="info">{item.category}</Badge>
+                      <option value="all">All Status</option>
+                      <option value="pending">Pending</option>
+                      <option value="preparing">Preparing</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-moa-cream/40" size={16} />
+                    <select 
+                      className="bg-black/20 border border-white/10 rounded-lg pl-10 pr-8 py-2 text-sm appearance-none focus:outline-none focus:border-moa-gold text-moa-cream cursor-pointer min-w-[140px]"
+                      value={orderDateFilter}
+                      onChange={(e) => setOrderDateFilter(e.target.value as any)}
+                    >
+                      <option value="today">Today</option>
+                      <option value="week">Last 7 Days</option>
+                      <option value="all">All Time</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW CONTENT */}
+            {orderViewMode === 'board' ? (
+              // BOARD VIEW
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 overflow-hidden">
+                {['pending', 'preparing', 'delivered'].map(status => (
+                  <div key={status} className="bg-white/5 rounded-2xl p-4 flex flex-col h-full border border-white/5">
+                    <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/5 flex-shrink-0">
+                      <h3 className="font-bold capitalize text-moa-gold flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${status === 'pending' ? 'bg-orange-500' : status === 'preparing' ? 'bg-blue-500' : 'bg-green-500'}`} />
+                        {status === 'pending' ? t('Pending', 'Menunggu') : status === 'preparing' ? t('Preparing', 'Diproses') : t('Delivered', 'Selesai')}
+                      </h3>
+                      <span className="text-xs bg-white/10 px-2 py-1 rounded-md text-white font-mono">{orders.filter(o => o.status === status).length}</span>
+                    </div>
+                    
+                    <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2">
+                       {orders.filter(o => o.status === status).map(order => (
+                         <Card key={order.id} className="bg-moa-dark border-white/5 hover:border-moa-gold/30 transition-colors flex-shrink-0">
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <span className="font-bold text-lg text-white">{t('Table', 'Meja')} {order.tableNumber}</span>
+                                <div className="text-xs text-moa-cream/40 flex items-center gap-1 mt-1">
+                                   <Clock size={10} /> {new Date(order.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                </div>
+                              </div>
+                              <span className="text-xs font-mono opacity-30">#{order.id}</span>
+                            </div>
+                            <div className="space-y-2 mb-4 bg-white/5 p-2 rounded-lg">
+                              {order.items.map((item, idx) => (
+                                <div key={idx} className="text-sm flex justify-between items-center">
+                                  <span className="opacity-90">{item.quantity}x {lang === 'en' ? item.name_en : item.name_id}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex gap-2">
+                              {status === 'pending' && (
+                                <>
+                                 <Button onClick={() => updateOrderStatus(order.id, 'cancelled')} variant="danger" className="w-1/3 py-2 text-xs">{t('Reject', 'Tolak')}</Button>
+                                 <Button onClick={() => updateOrderStatus(order.id, 'preparing')} className="w-2/3 py-2 text-xs">{t('Accept', 'Terima')}</Button>
+                                </>
+                              )}
+                              {status === 'preparing' && (
+                                <Button onClick={() => updateOrderStatus(order.id, 'delivered')} variant="secondary" className="w-full py-2 text-xs">{t('Mark Ready', 'Siap Saji')}</Button>
+                              )}
+                              {status === 'delivered' && (
+                                 <div className="flex items-center justify-center gap-2 text-xs text-green-500 font-bold w-full bg-green-500/10 py-2 rounded-lg border border-green-500/20">
+                                   <Check size={14} /> {t('Completed', 'Selesai')}
+                                 </div>
+                              )}
+                            </div>
+                         </Card>
+                       ))}
+                       {orders.filter(o => o.status === status).length === 0 && (
+                         <div className="text-center py-10 text-moa-cream/20">
+                           <ShoppingBag size={40} className="mx-auto mb-2 opacity-50" />
+                           <p className="text-sm">{t('No orders', 'Tidak ada pesanan')}</p>
+                         </div>
+                       )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              // LIST VIEW
+              <div className="bg-white/5 rounded-2xl border border-white/5 flex-1 overflow-hidden flex flex-col">
+                <div className="overflow-y-auto custom-scrollbar flex-1">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-white/5 text-moa-cream/60 text-xs uppercase tracking-wider sticky top-0 backdrop-blur-md z-10">
+                      <tr>
+                        <th className="p-4 font-bold border-b border-white/5">Order ID</th>
+                        <th className="p-4 font-bold border-b border-white/5">{t('Table', 'Meja')}</th>
+                        <th className="p-4 font-bold border-b border-white/5">{t('Date/Time', 'Waktu')}</th>
+                        <th className="p-4 font-bold border-b border-white/5">{t('Status', 'Status')}</th>
+                        <th className="p-4 font-bold border-b border-white/5">{t('Total', 'Total')}</th>
+                        <th className="p-4 font-bold border-b border-white/5 text-right">{t('Actions', 'Aksi')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {filteredOrders.length > 0 ? (
+                        filteredOrders.map(order => (
+                          <tr key={order.id} className="hover:bg-white/5 transition-colors group">
+                            <td className="p-4 font-mono text-sm text-moa-cream/80">#{order.id}</td>
+                            <td className="p-4 text-sm font-bold text-white">{order.tableNumber}</td>
+                            <td className="p-4 text-sm text-moa-cream/60">
+                              {new Date(order.timestamp).toLocaleString([], {month:'short', day:'numeric', hour: '2-digit', minute:'2-digit'})}
+                            </td>
+                            <td className="p-4">
+                              <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-full border ${
+                                order.status === 'pending' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' :
+                                order.status === 'preparing' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                                order.status === 'delivered' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                'bg-red-500/10 text-red-400 border-red-500/20'
+                              }`}>
+                                {order.status}
+                              </span>
+                            </td>
+                            <td className="p-4 text-sm font-bold text-moa-gold">{formatCurrency(order.totalAmount)}</td>
+                            <td className="p-4 text-right">
+                              <div className="flex justify-end gap-2">
+                                <button 
+                                  onClick={() => setSelectedOrder(order)}
+                                  className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-moa-cream transition-colors"
+                                  title="View Details"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                                {order.status === 'pending' && (
+                                  <>
+                                    <button onClick={() => updateOrderStatus(order.id, 'preparing')} className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors border border-blue-500/20"><ArrowRight size={16} /></button>
+                                    <button onClick={() => updateOrderStatus(order.id, 'cancelled')} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors border border-red-500/20"><XCircle size={16} /></button>
+                                  </>
+                                )}
+                                {order.status === 'preparing' && (
+                                  <button onClick={() => updateOrderStatus(order.id, 'delivered')} className="p-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 rounded-lg transition-colors border border-green-500/20"><Check size={16} /></button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-moa-cream/40">
+                             {t('No orders found matching your filters.', 'Tidak ada pesanan yang cocok.')}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* MENU MANAGER */}
+        {activeTab === 'menu' && (
+           <div className="space-y-6 animate-fade-in">
+             <div className="flex justify-between items-center">
+               <div>
+                 <h2 className="text-2xl font-bold font-display">{t('Menu Catalog', 'Katalog Menu')}</h2>
+                 <p className="text-sm text-moa-cream/50">{t('Manage your items, prices, and availability.', 'Kelola item, harga, dan ketersediaan.')}</p>
+               </div>
+               <Button onClick={() => handleOpenMenuModal()} className="gap-2"><Plus size={18} /> {t('Add New Item', 'Tambah Item')}</Button>
+             </div>
+
+             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+               {menu.map(item => (
+                 <div key={item.id} className="bg-white/5 rounded-xl overflow-hidden group border border-white/5 hover:border-moa-gold/50 transition-all hover:-translate-y-1">
+                    <div className="relative h-40 overflow-hidden">
+                      <img src={item.image} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-sm">
+                         <button onClick={() => handleOpenMenuModal(item)} className="p-2 bg-moa-gold text-moa-dark rounded-lg hover:bg-white transition-colors"><Edit2 size={16} /></button>
+                         <button onClick={() => deleteMenuItem(item.id)} className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"><Trash2 size={16} /></button>
+                      </div>
+                      <div className="absolute top-2 right-2">
+                        <Badge variant="info">{item.category}</Badge>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <h4 className="font-bold text-white truncate">{lang === 'en' ? item.name_en : item.name_id}</h4>
+                      <div className="flex justify-between items-center mt-2">
+                        <p className="text-moa-gold font-bold">{formatCurrency(item.price)}</p>
+                        <div className={`w-2 h-2 rounded-full ${item.isAvailable ? 'bg-green-500' : 'bg-red-500'}`} />
+                      </div>
                     </div>
                  </div>
                ))}
@@ -248,53 +607,183 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
 
         {/* EVENT MODE */}
         {activeTab === 'event' && (
-          <div className="max-w-2xl">
+          <div className="max-w-3xl animate-fade-in">
              <Card>
-               <div className="flex justify-between items-center mb-6">
+               <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
                   <div>
-                    <h2 className="text-xl font-bold text-moa-gold">Event Mode Configuration</h2>
-                    <p className="text-sm opacity-60">Manage temporary events and QR codes.</p>
+                    <h2 className="text-2xl font-bold text-moa-gold">{t('Event Mode Configuration', 'Konfigurasi Mode Acara')}</h2>
+                    <p className="text-sm opacity-60 mt-1">{t('Manage temporary events and generate QR codes.', 'Kelola acara sementara dan buat kode QR.')}</p>
                   </div>
-                  <div className={`w-14 h-8 rounded-full p-1 cursor-pointer transition-colors ${eventConfig.isActive ? 'bg-green-500' : 'bg-white/10'}`} onClick={() => updateEventConfig({...eventConfig, isActive: !eventConfig.isActive})}>
-                    <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform ${eventConfig.isActive ? 'translate-x-6' : ''}`} />
+                  <div className={`w-16 h-9 rounded-full p-1 cursor-pointer transition-colors duration-300 ${eventConfig.isActive ? 'bg-green-500' : 'bg-white/10'}`} onClick={() => updateEventConfig({...eventConfig, isActive: !eventConfig.isActive})}>
+                    <div className={`w-7 h-7 bg-white rounded-full shadow-md transform transition-transform duration-300 ${eventConfig.isActive ? 'translate-x-7' : ''}`} />
                   </div>
                </div>
                
-               <div className="space-y-4">
+               <div className="grid grid-cols-2 gap-6 mb-8">
                  <Input 
-                    label="Event Name" 
+                    label={t('Event Name', 'Nama Acara')} 
                     value={eventConfig.eventName} 
                     onChange={e => updateEventConfig({...eventConfig, eventName: e.target.value})} 
+                    placeholder="e.g. Grand Opening"
                   />
                  <Input 
-                    label="Active Table Count" 
+                    label={t('Active Table Count', 'Jumlah Meja Aktif')} 
                     type="number" 
                     value={eventConfig.tableCount} 
                     onChange={e => updateEventConfig({...eventConfig, tableCount: Number(e.target.value)})} 
                   />
-                  <Button fullWidth className="mt-4">Update Event Settings</Button>
+               </div>
+
+               <div className="bg-moa-gold/10 border border-moa-gold/20 rounded-xl p-4 flex items-center gap-3 text-moa-gold mb-8">
+                 <AlertCircle size={20} />
+                 <p className="text-sm">{t('Enabling Event Mode will show a special banner on the Customer App.', 'Mengaktifkan Mode Acara akan menampilkan banner khusus di Aplikasi Pelanggan.')}</p>
                </div>
              </Card>
 
              <div className="mt-8">
-               <h3 className="font-bold mb-4">Generated QR Codes</h3>
-               <div className="grid grid-cols-3 gap-4">
-                 {Array.from({ length: 6 }).map((_, i) => (
-                   <div key={i} className="bg-white p-4 rounded-xl flex flex-col items-center gap-2">
+               <div className="flex justify-between items-center mb-6">
+                 <h3 className="font-bold text-xl">{t('Generated QR Codes', 'Kode QR Terbuat')}</h3>
+                 <Button variant="outline" size="sm" onClick={() => window.print()}>{t('Print QR Codes', 'Cetak QR')}</Button>
+               </div>
+               
+               <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+                 {Array.from({ length: eventConfig.tableCount }).map((_, i) => (
+                   <div key={i} className="bg-white p-4 rounded-xl flex flex-col items-center gap-3 shadow-lg">
                      <img 
                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=MOA_TABLE_${i+1}`} 
                        alt="QR" 
                        className="w-full mix-blend-multiply opacity-90"
                      />
-                     <span className="text-black font-bold text-sm">Table {i+1}</span>
+                     <span className="text-black font-bold text-sm bg-gray-100 px-3 py-1 rounded-full">{t('Table', 'Meja')} {i+1}</span>
                    </div>
                  ))}
                </div>
              </div>
           </div>
         )}
-
+        
+        </div>
       </main>
+
+      {/* Menu Edit/Add Modal */}
+      <Modal 
+        isOpen={isMenuModalOpen} 
+        onClose={() => setIsMenuModalOpen(false)} 
+        title={editingItem ? t('Edit Menu Item', 'Edit Item Menu') : t('Add New Item', 'Tambah Item Baru')}
+      >
+        <div className="space-y-4">
+          <ImageUpload 
+            image={menuForm.image || ''} 
+            onImageChange={(base64) => setMenuForm({...menuForm, image: base64})} 
+          />
+          
+          <div className="grid grid-cols-2 gap-4">
+            <Input 
+              label={t("Name (English)", "Nama (Inggris)")}
+              value={menuForm.name_en} 
+              onChange={e => setMenuForm({...menuForm, name_en: e.target.value})} 
+              placeholder="e.g. Latte"
+            />
+            <Input 
+              label={t("Name (Indonesian)", "Nama (Indonesia)")}
+              value={menuForm.name_id} 
+              onChange={e => setMenuForm({...menuForm, name_id: e.target.value})} 
+              placeholder="e.g. Kopi Susu"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Input 
+              label={t("Price (IDR)", "Harga (IDR)")}
+              type="number" 
+              value={menuForm.price} 
+              onChange={e => setMenuForm({...menuForm, price: Number(e.target.value)})} 
+            />
+             <div className="flex flex-col gap-1 w-full">
+              <label className="text-sm text-moa-cream/70 ml-1 font-medium">{t("Category", "Kategori")}</label>
+              <select 
+                className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-moa-cream focus:border-moa-gold focus:outline-none"
+                value={menuForm.category}
+                onChange={e => setMenuForm({...menuForm, category: e.target.value as Category})}
+              >
+                <option value="Coffee" className="bg-moa-dark">Coffee</option>
+                <option value="Non-Coffee" className="bg-moa-dark">Non-Coffee</option>
+                <option value="Snacks" className="bg-moa-dark">Snacks</option>
+                <option value="Best Seller" className="bg-moa-dark">Best Seller</option>
+                <option value="Event" className="bg-moa-dark">Event Special</option>
+              </select>
+            </div>
+          </div>
+
+          <Input 
+            label={t("Description", "Deskripsi")}
+            value={menuForm.description} 
+            onChange={e => setMenuForm({...menuForm, description: e.target.value})} 
+            placeholder={t("Item description...", "Deskripsi item...")}
+          />
+
+          <div className="flex gap-3 justify-end pt-4 border-t border-white/10">
+            <Button variant="ghost" onClick={() => setIsMenuModalOpen(false)}>{t("Cancel", "Batal")}</Button>
+            <Button onClick={handleSaveMenu}>{editingItem ? t('Update Item', 'Perbarui Item') : t('Create Item', 'Buat Item')}</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Order Details Modal */}
+      {selectedOrder && (
+        <Modal
+          isOpen={!!selectedOrder}
+          onClose={() => setSelectedOrder(null)}
+          title={t('Order Details', 'Detail Pesanan')}
+        >
+          <div className="space-y-6">
+            <div className="flex justify-between items-start border-b border-white/10 pb-4">
+               <div>
+                  <h3 className="text-2xl font-bold text-moa-gold">Table {selectedOrder.tableNumber}</h3>
+                  <p className="text-sm text-moa-cream/50 font-mono">#{selectedOrder.id}</p>
+               </div>
+               <div className="text-right">
+                 <Badge variant={selectedOrder.status === 'delivered' ? 'success' : 'warning'}>{selectedOrder.status}</Badge>
+                 <p className="text-xs text-moa-cream/50 mt-1">{new Date(selectedOrder.timestamp).toLocaleString()}</p>
+               </div>
+            </div>
+            
+            <div className="bg-white/5 rounded-xl p-4 space-y-3">
+              {selectedOrder.items.map((item, i) => (
+                <div key={i} className="flex justify-between items-start border-b border-white/5 last:border-0 pb-3 last:pb-0">
+                  <div>
+                    <p className="font-bold text-white">{item.quantity}x {lang === 'en' ? item.name_en : item.name_id}</p>
+                    {/* Modifiers */}
+                    <div className="flex flex-wrap gap-2 mt-1">
+                       {item.sugarLevel && item.sugarLevel !== '100%' && <span className="text-[10px] bg-white/10 px-1.5 rounded text-moa-cream/70">Sugar: {item.sugarLevel}</span>}
+                       {item.iceLevel && item.iceLevel !== 'Normal' && <span className="text-[10px] bg-white/10 px-1.5 rounded text-moa-cream/70">Ice: {item.iceLevel}</span>}
+                       {item.extraShot && <span className="text-[10px] bg-moa-gold/10 px-1.5 rounded text-moa-gold">Extra Shot</span>}
+                    </div>
+                  </div>
+                  <p className="font-mono text-sm">{formatCurrency(item.price * item.quantity)}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+               <div className="flex justify-between text-sm">
+                 <span className="text-moa-cream/60">Payment Method</span>
+                 <span className="capitalize font-bold">{selectedOrder.paymentMethod}</span>
+               </div>
+               <div className="flex justify-between text-xl font-bold text-moa-gold pt-2 border-t border-white/10">
+                 <span>Total Amount</span>
+                 <span>{formatCurrency(selectedOrder.totalAmount)}</span>
+               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+               <Button variant="outline" onClick={() => setSelectedOrder(null)}>{t('Close', 'Tutup')}</Button>
+               <Button onClick={() => window.print()}>{t('Print Receipt', 'Cetak Struk')}</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
     </div>
   );
 };

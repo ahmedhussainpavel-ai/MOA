@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -34,6 +34,7 @@
       body {
         background-color: #1C1C1C;
         color: #F4E9DA;
+        margin: 0;
       }
       /* Hide scrollbar for clean UI */
       ::-webkit-scrollbar {
@@ -63,10 +64,13 @@
 </script>
 </head>
   <body>
-    <div id="root" class="h-screen w-screen flex items-center justify-center bg-[#1C1C1C] text-[#D4A85F] font-sans animate-pulse">
-      <div class="text-center">
-        <h1 class="text-2xl font-bold mb-2">MOA COFFEE</h1>
-        <p class="text-sm opacity-60">Loading App...</p>
+    <div id="root">
+      <!-- Loading screen: Solid background, pulsing content only -->
+      <div class="fixed inset-0 flex items-center justify-center bg-[#1C1C1C] text-[#D4A85F] font-sans z-50">
+        <div class="text-center animate-pulse">
+          <h1 class="text-2xl font-bold mb-2">MOA COFFEE</h1>
+          <p class="text-sm opacity-60">Loading App...</p>
+        </div>
       </div>
     </div>
     <script type="module" src="/index.tsx"></script>

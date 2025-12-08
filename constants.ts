@@ -8,7 +8,7 @@ export const INITIAL_MENU: MenuItem[] = [
     price: 25000,
     category: 'Coffee',
     description: 'Our signature blend with secret creamy milk and palm sugar.',
-    image: 'https://picsum.photos/400/400?random=1',
+    image: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?q=80&w=400&auto=format&fit=crop',
     healthyScore: 6,
     ingredients: ['Espresso', 'Creamy Milk', 'Palm Sugar', 'Secret Syrup'],
     isAvailable: true
@@ -20,7 +20,7 @@ export const INITIAL_MENU: MenuItem[] = [
     price: 15000,
     category: 'Coffee',
     description: 'Pure, strong, and bold extraction of our house blend beans.',
-    image: 'https://picsum.photos/400/400?random=2',
+    image: 'https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?q=80&w=400&auto=format&fit=crop',
     healthyScore: 9,
     ingredients: ['100% Arabica Beans'],
     isAvailable: true
@@ -32,7 +32,7 @@ export const INITIAL_MENU: MenuItem[] = [
     price: 18000,
     category: 'Coffee',
     description: 'Espresso diluted with hot water for a smooth finish.',
-    image: 'https://picsum.photos/400/400?random=3',
+    image: 'https://images.unsplash.com/photo-1551030173-122aabc4489c?q=80&w=400&auto=format&fit=crop',
     healthyScore: 9,
     ingredients: ['Espresso', 'Water'],
     isAvailable: true
@@ -44,7 +44,7 @@ export const INITIAL_MENU: MenuItem[] = [
     price: 22000,
     category: 'Coffee',
     description: 'Espresso topped with steamed milk foam.',
-    image: 'https://picsum.photos/400/400?random=4',
+    image: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?q=80&w=400&auto=format&fit=crop',
     healthyScore: 7,
     ingredients: ['Espresso', 'Steamed Milk', 'Foam'],
     isAvailable: true
@@ -56,7 +56,7 @@ export const INITIAL_MENU: MenuItem[] = [
     price: 25000,
     category: 'Coffee',
     description: 'Chocolate flavoured variant of a café latte.',
-    image: 'https://picsum.photos/400/400?random=5',
+    image: 'https://images.unsplash.com/photo-1578314675249-a6910f80cc4e?q=80&w=400&auto=format&fit=crop',
     healthyScore: 5,
     ingredients: ['Espresso', 'Chocolate', 'Milk'],
     isAvailable: true
@@ -68,7 +68,7 @@ export const INITIAL_MENU: MenuItem[] = [
     price: 25000,
     category: 'Non-Coffee',
     description: 'Premium Japanese green tea powder with milk.',
-    image: 'https://picsum.photos/400/400?random=6',
+    image: 'https://images.unsplash.com/photo-1515823664409-53b7a835bf61?q=80&w=400&auto=format&fit=crop',
     healthyScore: 8,
     ingredients: ['Matcha Powder', 'Milk', 'Sugar'],
     isAvailable: true
@@ -80,7 +80,7 @@ export const INITIAL_MENU: MenuItem[] = [
     price: 20000,
     category: 'Non-Coffee',
     description: 'Rich and creamy hot cocoa.',
-    image: 'https://picsum.photos/400/400?random=7',
+    image: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?q=80&w=400&auto=format&fit=crop',
     healthyScore: 4,
     ingredients: ['Cocoa Powder', 'Milk', 'Sugar'],
     isAvailable: true
@@ -92,7 +92,7 @@ export const INITIAL_MENU: MenuItem[] = [
     price: 18000,
     category: 'Snacks',
     description: 'Buttery, flaky, french pastry.',
-    image: 'https://picsum.photos/400/400?random=8',
+    image: 'https://images.unsplash.com/photo-1555507036-ab1f4038808a?q=80&w=400&auto=format&fit=crop',
     healthyScore: 3,
     ingredients: ['Flour', 'Butter', 'Yeast'],
     isAvailable: true
@@ -104,17 +104,9 @@ export const INITIAL_MENU: MenuItem[] = [
     price: 15000,
     category: 'Snacks',
     description: 'Moist, sweet bread made from mashed bananas.',
-    image: 'https://picsum.photos/400/400?random=9',
+    image: 'https://images.unsplash.com/photo-1603569283847-aa295f0d016a?q=80&w=400&auto=format&fit=crop',
     healthyScore: 6,
     ingredients: ['Banana', 'Flour', 'Sugar'],
     isAvailable: true
   }
 ];
-
-export const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0
-  }).format(amount);
-};
