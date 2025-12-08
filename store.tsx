@@ -18,25 +18,44 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Load initial state from local storage or defaults
+  // Load initial state from local storage or defaults with Error Handling
   const [menu, setMenuState] = useState<MenuItem[]>(() => {
-    const saved = localStorage.getItem('moa_menu');
-    return saved ? JSON.parse(saved) : INITIAL_MENU;
+    try {
+      const saved = localStorage.getItem('moa_menu');
+      return saved ? JSON.parse(saved) : INITIAL_MENU;
+    } catch (e) {
+      console.error("Failed to load menu", e);
+      return INITIAL_MENU;
+    }
   });
 
   const [orders, setOrdersState] = useState<Order[]>(() => {
-    const saved = localStorage.getItem('moa_orders');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('moa_orders');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Failed to load orders", e);
+      return [];
+    }
   });
 
   const [eventConfig, setEventConfigState] = useState<EventConfig>(() => {
-    const saved = localStorage.getItem('moa_event');
-    return saved ? JSON.parse(saved) : {
-      isActive: false,
-      eventName: 'Grand Opening',
-      tableCount: 10,
-      discountPercentage: 0
-    };
+    try {
+      const saved = localStorage.getItem('moa_event');
+      return saved ? JSON.parse(saved) : {
+        isActive: false,
+        eventName: 'Grand Opening',
+        tableCount: 10,
+        discountPercentage: 0
+      };
+    } catch (e) {
+      return {
+        isActive: false,
+        eventName: 'Grand Opening',
+        tableCount: 10,
+        discountPercentage: 0
+      };
+    }
   });
 
   // Persistence Effects
