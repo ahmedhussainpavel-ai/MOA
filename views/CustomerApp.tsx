@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Search, Plus, Minus, X, ChevronRight, CheckCircle, Clock, Coffee, Heart, AlertCircle, Snowflake, Zap, Wallet, QrCode } from 'lucide-react';
 import { useStore } from '../store';
@@ -29,6 +29,24 @@ export const CustomerApp: React.FC<CustomerAppProps> = ({ tableNumber }) => {
   
   // Checkout State
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qris'>('cash');
+
+  // Session Restore Logic
+  const hasRestoredSession = useRef(false);
+  useEffect(() => {
+    if (hasRestoredSession.current) return;
+    
+    // Check for existing active orders for this table
+    // We prioritize the most recent one that isn't delivered/cancelled
+    const activeSessionOrder = orders
+      .filter(o => o.tableNumber === tableNumber && ['pending', 'accepted', 'preparing'].includes(o.status))
+      .sort((a, b) => b.timestamp - a.timestamp)[0];
+
+    if (activeSessionOrder) {
+      setActiveOrderId(activeSessionOrder.id);
+      setView('tracking');
+    }
+    hasRestoredSession.current = true;
+  }, [tableNumber, orders]);
 
   // Derived state
   const activeOrder = orders.find(o => o.id === activeOrderId);

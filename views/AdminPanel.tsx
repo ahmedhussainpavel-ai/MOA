@@ -173,7 +173,10 @@ export const AdminPanel: React.FC<{ onLogout: () => void }> = ({ onLogout }) => 
                          </div>
                          <div className="flex gap-2 mt-2">
                            {status === 'pending' && (
-                             <Button onClick={() => updateOrderStatus(order.id, 'preparing')} className="w-full py-2 text-sm">Accept</Button>
+                             <>
+                              <Button onClick={() => updateOrderStatus(order.id, 'cancelled')} variant="ghost" className="w-1/3 py-2 text-sm text-red-400 hover:bg-red-500/10">Reject</Button>
+                              <Button onClick={() => updateOrderStatus(order.id, 'preparing')} className="w-2/3 py-2 text-sm">Accept</Button>
+                             </>
                            )}
                            {status === 'preparing' && (
                              <Button onClick={() => updateOrderStatus(order.id, 'delivered')} variant="secondary" className="w-full py-2 text-sm">Ready</Button>
